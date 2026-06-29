@@ -1,0 +1,220 @@
+{% extends 'pos_app/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-{% if 'Add' in title %}plus-circle{% else %}edit{% endif %} me-2"></i>
+                {{ title }}
+            </div>
+            <div class="card-body">
+                <!-- ✅ ADD enctype="multipart/form-data" HERE -->
+                <form method="post" id="productForm" novalidate enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- Left column -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">
+                                    <i class="fas fa-tag me-1"></i> Category
+                                </label>
+                                <div class="input-group">
+                                    {{ form.category }}
+                                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#categoryModal">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                {% if form.category.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.category.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">
+                                    <i class="fas fa-gem me-1"></i> Product Name
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">
+                                    <i class="fas fa-align-left me-1"></i> Description
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.description.errors }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- ✅ NEW: Image field (placed after description) -->
+                            <div class="mb-3">
+                                <label for="{{ form.image.id_for_label }}" class="form-label">
+                                    <i class="fas fa-image me-1"></i> Product Image
+                                </label>
+                                {{ form.image }}
+                                {% if form.instance.image %}
+                                    <div class="mt-2">
+                                        <img src="{{ form.instance.image.url }}" alt="Current image" style="max-width:150px; max-height:150px; border:1px solid #ddd; border-radius:4px; padding:4px;">
+                                        <p class="text-muted small">Current image</p>
+                                    </div>
+                                {% endif %}
+                                {% if form.image.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.image.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Right column -->
+                        <div class="col-md-6">
+                            <!-- Retail Price -->
+                            <div class="mb-3">
+                                <label for="{{ form.price.id_for_label }}" class="form-label">
+                                    <i class="fas fa-money-bill-wave me-1"></i> Retail Price (KSh)
+                                </label>
+                                {{ form.price }}
+                                {% if form.price.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.price.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <!-- Wholesale Price -->
+                            <div class="mb-3">
+                                <label for="{{ form.wholesale_price.id_for_label }}" class="form-label">
+                                    <i class="fas fa-tags me-1"></i> Wholesale Price (KSh)
+                                </label>
+                                {{ form.wholesale_price }}
+                                {% if form.wholesale_price.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.wholesale_price.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ form.quantity_in_stock.id_for_label }}" class="form-label">
+                                    <i class="fas fa-boxes me-1"></i> Quantity in Stock
+                                </label>
+                                {{ form.quantity_in_stock }}
+                                {% if form.quantity_in_stock.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.quantity_in_stock.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="mt-4 p-3 bg-secondary bg-opacity-10 rounded">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Ensure stock quantity is accurate. Negative values are not allowed.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4 border-top pt-3">
+                        <a href="{% url 'product_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for adding new category (no parent) -->
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="categoryModalLabel">
+                    <i class="fas fa-plus-circle me-2"></i> Add New Category
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="categoryForm" method="post" action="{% url 'category_create' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="categoryName" class="form-label">Category Name</label>
+                        <input type="text" class="form-control" id="categoryName" name="name" required placeholder="e.g., Stud Earrings">
+                    </div>
+                    <div id="categoryFormErrors" class="text-danger"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveCategoryBtn">
+                    <i class="fas fa-save me-1"></i> Save Category
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('categoryModal');
+        const saveBtn = document.getElementById('saveCategoryBtn');
+        const categoryForm = document.getElementById('categoryForm');
+        const errorContainer = document.getElementById('categoryFormErrors');
+
+        saveBtn.addEventListener('click', function() {
+            const formData = new FormData(categoryForm);
+            // Get CSRF token from the form
+            const csrftoken = categoryForm.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            fetch('{% url "category_create" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrftoken,
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Add new option to the category dropdown
+                    const catSelect = document.getElementById('{{ form.category.id_for_label }}');
+                    const newOption = document.createElement('option');
+                    newOption.value = data.id;
+                    newOption.textContent = data.name;
+                    catSelect.appendChild(newOption);
+                    catSelect.value = data.id;
+                    // Close modal
+                    const modalInstance = bootstrap.Modal.getInstance(modal);
+                    modalInstance.hide();
+                    // Optionally show success message
+                    alert('Category "' + data.name + '" added successfully!');
+                } else {
+                    // Show errors
+                    errorContainer.innerHTML = '';
+                    if (data.errors) {
+                        for (const field in data.errors) {
+                            errorContainer.innerHTML += `<p><strong>${field}:</strong> ${data.errors[field].join(', ')}</p>`;
+                        }
+                    } else {
+                        errorContainer.innerHTML = '<p>Failed to create category. Please check the name.</p>';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                errorContainer.innerHTML = '<p>Network error. Please try again. Check console for details.</p>';
+            });
+        });
+
+        // Clear errors when modal is hidden
+        modal.addEventListener('hidden.bs.modal', function() {
+            errorContainer.innerHTML = '';
+            categoryForm.reset();
+        });
+    });
+</script>
+{% endblock %}

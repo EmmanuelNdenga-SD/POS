@@ -1,0 +1,49 @@
+{% extends 'pos_app/base.html' %}
+{% block title %}Monthly Report{% endblock %}
+{% block content %}
+<h2>Monthly Report - {{ month }}</h2>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Sales Summary</div>
+            <div class="card-body">
+                <p><strong>Total Sales:</strong> KSh {{ total_sales|floatformat:2 }}</p>
+                <p><strong>Number of Sales:</strong> {{ sales_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Products Remaining</div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for product in products %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        {{ product.name }}
+                        <span class="badge bg-secondary">{{ product.quantity_in_stock }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item">No products.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+<h4 class="mt-4">Sale Details</h4>
+<table class="table table-striped">
+    <thead><tr><th>#ID</th><th>Customer</th><th>Total</th><th>Date</th></tr></thead>
+    <tbody>
+        {% for sale in sales %}
+        <tr>
+            <td>{{ sale.id }}</td>
+            <td>{{ sale.customer_name|default:"Walk-in" }}</td>
+            <td>{{ sale.total_amount }}</td>
+            <td>{{ sale.created_at|date:"d/m/Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">No sales this month.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

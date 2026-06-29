@@ -1,0 +1,225 @@
+{% extends 'pos_app/base.html' %}
+{% block title %}New Sale{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cash-register me-2"></i> New Sale
+            </div>
+            <div class="card-body">
+                <form method="post" id="saleForm">
+                    {% csrf_token %}
+                    
+                    <!-- Sale details -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="{{ sale_form.customer_name.id_for_label }}" class="form-label">
+                                <i class="fas fa-user me-1"></i> Customer Name
+                            </label>
+                            {{ sale_form.customer_name }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ sale_form.payment_method.id_for_label }}" class="form-label">
+                                <i class="fas fa-credit-card me-1"></i> Payment Method
+                            </label>
+                            {{ sale_form.payment_method }}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ sale_form.payment_status.id_for_label }}" class="form-label">
+                                <i class="fas fa-clock me-1"></i> Payment Status
+                            </label>
+                            {{ sale_form.payment_status }}
+                        </div>
+                    </div>
+
+                    <!-- Product List -->
+                    <h5 class="mt-4 mb-3">
+                        <i class="fas fa-boxes me-2"></i> Select Products
+                        <small class="text-muted">(enter quantity and choose price type)</small>
+                    </h5>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="productTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th>Price (KSh)</th>
+                                    <th>Stock</th>
+                                    <th>Price Type</th>
+                                    <th>Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ product.name }}</strong>
+                                        {% if product.description %}
+                                            <br><small class="text-muted">{{ product.description|truncatechars:30 }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ product.category.name|default:"-" }}</td>
+                                    <td class="price-display">{{ product.retail_price }}</td>
+                                    <td>
+                                        <span class="badge {% if product.quantity_in_stock <= 5 %}bg-danger{% elif product.quantity_in_stock <= 10 %}bg-warning{% else %}bg-success{% endif %}">
+                                            {{ product.quantity_in_stock }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <select name="price_type_{{ product.id }}" class="form-select price-type-select" style="width:120px;">
+                                            <option value="retail" data-price="{{ product.retail_price }}">Retail</option>
+                                            <option value="wholesale" data-price="{{ product.wholesale_price }}">Wholesale</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="number" name="quantity_{{ product.id }}" 
+                                               class="form-control quantity-input" 
+                                               min="0" 
+                                               value="0" style="width:80px;"
+                                               data-retail="{{ product.retail_price }}"
+                                               data-wholesale="{{ product.wholesale_price }}"
+                                               data-stock="{{ product.quantity_in_stock }}">
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <i class="fas fa-box-open fa-2x d-block mb-2 text-muted"></i>
+                                        No products available.
+                                        {% if user.is_superuser or user.groups.all.0.name == 'Admin' %}
+                                            <a href="{% url 'product_create' %}" class="btn btn-sm btn-primary ms-2">
+                                                <i class="fas fa-plus"></i> Add Product
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Please contact an administrator.</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="6" class="text-end">Total Amount</th>
+                                    <th><span id="grandTotal" class="h5 text-primary">0.00</span></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const inputs = document.querySelectorAll('.quantity-input');
+                            const priceTypeSelects = document.querySelectorAll('.price-type-select');
+                            const grandTotal = document.getElementById('grandTotal');
+
+                            function getPriceForRow(row) {
+                                const priceSelect = row.querySelector('.price-type-select');
+                                const selectedOption = priceSelect.options[priceSelect.selectedIndex];
+                                return parseFloat(selectedOption.dataset.price) || 0;
+                            }
+
+                            function updateRowPrice(row) {
+                                const priceDisplay = row.querySelector('.price-display');
+                                const price = getPriceForRow(row);
+                                priceDisplay.textContent = price.toFixed(2);
+                                updateTotal();
+                            }
+
+                            function updateTotal() {
+                                let total = 0;
+                                document.querySelectorAll('#productTable tbody tr').forEach(row => {
+                                    const qty = parseInt(row.querySelector('.quantity-input').value) || 0;
+                                    const price = getPriceForRow(row);
+                                    total += qty * price;
+                                });
+                                grandTotal.textContent = total.toFixed(2);
+                            }
+
+                            // Attach events to each row
+                            document.querySelectorAll('#productTable tbody tr').forEach(row => {
+                                const qtyInput = row.querySelector('.quantity-input');
+                                const priceSelect = row.querySelector('.price-type-select');
+
+                                qtyInput.addEventListener('input', function() {
+                                    const qty = parseInt(this.value) || 0;
+                                    const stock = parseInt(this.dataset.stock) || 0;
+                                    // Highlight if exceeding stock
+                                    if (qty > stock && stock > 0) {
+                                        this.style.borderColor = '#dc3545';
+                                        this.style.backgroundColor = 'rgba(220,53,69,0.1)';
+                                    } else {
+                                        this.style.borderColor = '';
+                                        this.style.backgroundColor = '';
+                                    }
+                                    if (qty < 0) {
+                                        this.value = 0;
+                                    }
+                                    updateTotal();
+                                });
+
+                                priceSelect.addEventListener('change', function() {
+                                    updateRowPrice(row);
+                                });
+
+                                // Initial price display
+                                updateRowPrice(row);
+                            });
+
+                            // Before submit, collect products with qty > 0
+                            document.getElementById('saleForm').addEventListener('submit', function(e) {
+                                const rows = document.querySelectorAll('#productTable tbody tr');
+                                let hasProducts = false;
+                                rows.forEach(row => {
+                                    const qty = parseInt(row.querySelector('.quantity-input').value) || 0;
+                                    if (qty > 0) {
+                                        hasProducts = true;
+                                        const productId = row.querySelector('.quantity-input').name.replace('quantity_', '');
+                                        const priceType = row.querySelector('.price-type-select').value;
+
+                                        // Hidden fields for product_id, quantity, price_type
+                                        const pidInput = document.createElement('input');
+                                        pidInput.type = 'hidden';
+                                        pidInput.name = 'product_id';
+                                        pidInput.value = productId;
+                                        this.appendChild(pidInput);
+
+                                        const qtyInput = document.createElement('input');
+                                        qtyInput.type = 'hidden';
+                                        qtyInput.name = 'quantity';
+                                        qtyInput.value = qty;
+                                        this.appendChild(qtyInput);
+
+                                        const typeInput = document.createElement('input');
+                                        typeInput.type = 'hidden';
+                                        typeInput.name = 'price_type';
+                                        typeInput.value = priceType;
+                                        this.appendChild(typeInput);
+                                    }
+                                });
+                                if (!hasProducts) {
+                                    e.preventDefault();
+                                    alert('Please add at least one product with quantity > 0.');
+                                }
+                            });
+                        });
+                    </script>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4 border-top pt-3">
+                        <a href="{% url 'sale_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check me-1"></i> Complete Sale
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

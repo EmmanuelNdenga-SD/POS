@@ -1,0 +1,132 @@
+{% extends 'pos_app/base.html' %}
+{% block title %}Categories{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-tags me-2"></i> Manage Categories</h2>
+    <a href="{% url 'category_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Add Category
+    </a>
+</div>
+
+<!-- Display messages (success/error) -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Category Name</th>
+                        <th>Products</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category in categories %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td><strong>{{ category.name }}</strong></td>
+                        <td>{{ category.product_count }}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-danger" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#deleteModal"
+                                    data-category-id="{{ category.id }}"
+                                    data-category-name="{{ category.name }}"
+                                    data-product-count="{{ category.product_count }}">
+                                <i class="fas fa-trash me-1"></i> Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center">No categories found. <a href="{% url 'category_create' %}">Add one now</a>.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i> Confirm Deletion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the category <strong id="deleteCategoryName"></strong>?</p>
+                <div id="deleteWarning" class="alert alert-warning d-none">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    This category contains <span id="deleteProductCount">0</span> product(s). 
+                    You must reassign or delete them before you can remove this category.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" id="deleteForm">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="fas fa-trash me-1"></i> Delete Category
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteModal = document.getElementById('deleteModal');
+        const deleteForm = document.getElementById('deleteForm');
+        const categoryNameSpan = document.getElementById('deleteCategoryName');
+        const productCountSpan = document.getElementById('deleteProductCount');
+        const warningDiv = document.getElementById('deleteWarning');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+        deleteModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const categoryId = button.getAttribute('data-category-id');
+            const categoryName = button.getAttribute('data-category-name');
+            const productCount = parseInt(button.getAttribute('data-product-count')) || 0;
+
+            // Update modal content
+            categoryNameSpan.textContent = categoryName;
+            productCountSpan.textContent = productCount;
+
+            // Set form action using Django URL (you must have the url name 'category_delete')
+            deleteForm.action = `{% url 'category_delete' 0 %}`.replace('0', categoryId);
+
+            // Show/hide warning and disable button if products exist
+            if (productCount > 0) {
+                warningDiv.classList.remove('d-none');
+                confirmBtn.disabled = true;
+                confirmBtn.title = 'Cannot delete categories with products.';
+            } else {
+                warningDiv.classList.add('d-none');
+                confirmBtn.disabled = false;
+                confirmBtn.title = '';
+            }
+        });
+
+        // Reset when modal is closed
+        deleteModal.addEventListener('hidden.bs.modal', function() {
+            deleteForm.action = '';
+            confirmBtn.disabled = false;
+        });
+    });
+</script>
+{% endblock %}

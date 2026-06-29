@@ -1,0 +1,45 @@
+{% extends 'pos_app/base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h2>Dashboard</h2>
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Products</h5>
+                <p class="card-text display-6">{{ total_products }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Paid Sales</h5>
+                <p class="card-text display-6">{{ total_sales }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Revenue</h5>
+                <p class="card-text display-6">KSh {{ total_revenue|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Pending (Credit)</h5>
+                <p class="card-text display-6">{{ pending_sales }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header">Low Stock Alert</div>
+    <div class="card-body">
+        <p>Products with stock less than 10: {{ low_stock }}</p>
+    </div>
+</div>
+{% endblock %}

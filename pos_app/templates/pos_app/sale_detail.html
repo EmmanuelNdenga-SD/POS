@@ -1,0 +1,26 @@
+{% extends 'pos_app/base.html' %}
+{% block title %}Sale #{{ sale.id }}{% endblock %}
+{% block content %}
+<h2>Sale #{{ sale.id }}</h2>
+<p><strong>Customer:</strong> {{ sale.customer_name|default:"Walk-in" }}</p>
+<p><strong>Total:</strong> KSh {{ sale.total_amount }}</p>
+<p><strong>Payment Method:</strong> {{ sale.get_payment_method_display }}</p>
+<p><strong>Status:</strong> <span class="badge bg-{% if sale.payment_status == 'paid' %}success{% else %}warning{% endif %}">{{ sale.get_payment_status_display }}</span></p>
+<p><strong>Date:</strong> {{ sale.created_at }}</p>
+<p><strong>Sold by:</strong> {{ sale.created_by.username|default:"-" }}</p>
+<h4>Items</h4>
+<table class="table">
+    <thead><tr><th>Product</th><th>Quantity</th><th>Price</th><th>Subtotal</th></tr></thead>
+    <tbody>
+        {% for item in sale.items.all %}
+        <tr>
+            <td>{{ item.product.name }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.price_at_sale }}</td>
+            <td>{{ item.quantity|floatformat:0|add:item.price_at_sale|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="{% url 'sale_list' %}" class="btn btn-secondary">Back</a>
+{% endblock %}

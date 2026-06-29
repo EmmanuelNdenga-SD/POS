@@ -1,0 +1,87 @@
+{% extends 'pos_app/base.html' %}
+{% block title %}Staff Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-chart-line me-2"></i> Staff Dashboard</h2>
+    <div>
+        <span class="badge bg-success me-2">Welcome, {{ user.get_full_name|default:user.username }}</span>
+        <!-- ✅ Logout as POST form -->
+        <form method="post" action="{% url 'logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="fas fa-sign-out-alt me-1"></i> Logout
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Display messages -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Product</th>
+                        <th>Retail Price</th>
+                        <th>Stock</th>
+                        <th>Last Restocked</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" style="width:60px; height:auto; border-radius:4px;">
+                            {% else %}
+                                <span style="color:gray; font-size:0.85rem;">No image</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ product.name }}</strong></td>
+                        <td>KSh {{ product.price|floatformat:2 }}</td>
+                        <td>{{ product.quantity_in_stock }}</td>
+                        <td>
+                            {% if product.last_restocked %}
+                                {{ product.last_restocked|date:"Y-m-d H:i" }}
+                            {% else %}
+                                Never
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'staff_make_sale' %}?product={{ product.id }}" class="btn btn-success" title="Sell">
+                                    <i class="fas fa-cart-plus"></i>
+                                </a>
+                                <a href="{% url 'staff_restock' product.id %}" class="btn btn-warning" title="Restock">
+                                    <i class="fas fa-arrow-up"></i>
+                                </a>
+                                <a href="{% url 'product_update' product.id %}" class="btn btn-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">No products available.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
