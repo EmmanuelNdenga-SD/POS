@@ -10,7 +10,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.db.models.deletion import ProtectedError
 from django.db import models
 
-from .models import Product, Category, Sale, SaleItem, DeletionRequest  # <-- added DeletionRequest
+from .models import Product, Category, Sale, SaleItem, DeletionRequest
 from .forms import (
     ProductForm, CategoryForm, SaleForm, SaleItemForm,
     RestockForm, StaffSaleForm
@@ -31,13 +31,16 @@ def dashboard(request):
     total_sales = Sale.objects.filter(payment_status='paid').count()
     total_revenue = Sale.objects.filter(payment_status='paid').aggregate(Sum('total_amount'))['total_amount__sum'] or 0
     pending_sales = Sale.objects.filter(payment_status='pending').count()
-    low_stock = Product.objects.filter(quantity_in_stock__lt=10).count()
+    low_stock = Product.objects.filter(quantity_in_stock__lt=10, quantity_in_stock__gt=0).count()
+    out_of_stock = Product.objects.filter(quantity_in_stock=0).count()
+    
     context = {
         'total_products': total_products,
         'total_sales': total_sales,
         'total_revenue': total_revenue,
         'pending_sales': pending_sales,
-        'low_stock': low_stock,
+        'low_stock_count': low_stock,
+        'out_of_stock_count': out_of_stock,
     }
     return render(request, 'pos_app/dashboard.html', context)
 
@@ -63,7 +66,17 @@ def staff_login(request):
 @user_passes_test(is_staff_or_admin, login_url='staff_login')
 def staff_dashboard(request):
     products = Product.objects.select_related('category').all().order_by('name')
-    return render(request, 'pos_app/staff_dashboard.html', {'products': products})
+    low_stock = Product.objects.filter(quantity_in_stock__lt=10, quantity_in_stock__gt=0).count()
+    out_of_stock = Product.objects.filter(quantity_in_stock=0).count()
+    total_products = products.count()
+    
+    context = {
+        'products': products,
+        'low_stock_count': low_stock,
+        'out_of_stock_count': out_of_stock,
+        'total_products': total_products,
+    }
+    return render(request, 'pos_app/staff_dashboard.html', context)
 
 # ---------- Staff Make Sale (single product) ----------
 @login_required
@@ -103,7 +116,6 @@ def staff_make_sale(request):
                 sale.delete()
                 return redirect('staff_make_sale')
     else:
-        # Pre-select product if passed via URL parameter
         initial = {}
         product_id = request.GET.get('product')
         if product_id:
@@ -138,7 +150,19 @@ def staff_restock(request, product_id):
 @user_passes_test(is_staff_or_admin)
 def product_list(request):
     products = Product.objects.select_related('category').all()
-    return render(request, 'pos_app/product_list.html', {'products': products})
+    categories = Category.objects.all()
+    
+    in_stock_count = products.filter(quantity_in_stock__gt=0).count()
+    low_stock_count = products.filter(quantity_in_stock__gt=0, quantity_in_stock__lt=10).count()
+    out_of_stock_count = products.filter(quantity_in_stock=0).count()
+    
+    return render(request, 'pos_app/product_list.html', {
+        'products': products,
+        'categories': categories,
+        'in_stock_count': in_stock_count,
+        'low_stock_count': low_stock_count,
+        'out_of_stock_count': out_of_stock_count,
+    })
 
 @login_required
 @user_passes_test(is_staff_or_admin)
@@ -154,7 +178,7 @@ def product_create(request):
     return render(request, 'pos_app/product_form.html', {'form': form, 'title': 'Add Product'})
 
 @login_required
-@user_passes_test(is_staff_or_admin)  # changed from is_admin to allow staff to edit
+@user_passes_test(is_staff_or_admin)
 def product_update(request, pk):
     product = get_object_or_404(Product, pk=pk)
     if request.method == 'POST':
@@ -172,7 +196,6 @@ def product_update(request, pk):
 def product_delete(request, pk):
     product = get_object_or_404(Product, pk=pk)
     if request.method == 'POST':
-        # Check if user is admin (superuser or Admin group)
         if request.user.is_superuser or request.user.groups.filter(name='Admin').exists():
             try:
                 product.delete()
@@ -180,7 +203,6 @@ def product_delete(request, pk):
             except ProtectedError:
                 messages.error(request, f"Cannot delete '{product.name}' because it has been used in sales.")
         else:
-            # Staff: create pending request
             pending = DeletionRequest.objects.filter(
                 object_type='product', object_id=pk, status='pending'
             ).first()
@@ -217,23 +239,34 @@ def sale_create(request):
 
             product_ids = request.POST.getlist('product_id')
             quantities = request.POST.getlist('quantity')
+            price_types = request.POST.getlist('price_type')
+            
             total = 0
-            for pid, qty in zip(product_ids, quantities):
+            for pid, qty, ptype in zip(product_ids, quantities, price_types):
                 if pid and qty and int(qty) > 0:
                     product = get_object_or_404(Product, pk=pid)
                     qty = int(qty)
+                    
+                    # Choose price based on type
+                    if ptype == 'wholesale':
+                        price = product.wholesale_price
+                    else:
+                        price = product.price  # retail
+                    
                     if sale.payment_status == 'paid' and product.quantity_in_stock < qty:
                         messages.error(request, f"Insufficient stock for {product.name}. Available: {product.quantity_in_stock}")
                         sale.delete()
                         return redirect('sale_create')
-                    price = product.price
+                    
                     SaleItem.objects.create(
                         sale=sale,
                         product=product,
                         quantity=qty,
-                        price_at_sale=price
+                        price_at_sale=price,
+                        price_type=ptype
                     )
                     total += price * qty
+                    
             sale.total_amount = total
             sale.save()
             messages.success(request, f'Sale #{sale.id} created successfully.')
@@ -250,36 +283,33 @@ def sale_detail(request, pk):
     return render(request, 'pos_app/sale_detail.html', {'sale': sale})
 
 @login_required
-@user_passes_test(is_staff_or_admin)  # changed from is_admin to allow staff to request deletion
 def sale_delete(request, pk):
+    """
+    Delete a sale directly - Staff and Admin can delete without approval
+    No admin approval required - direct deletion with stock restoration
+    """
     sale = get_object_or_404(Sale, pk=pk)
-    if request.method == 'POST':
-        # Check if user is admin (superuser or Admin group)
-        if request.user.is_superuser or request.user.groups.filter(name='Admin').exists():
-            # Admin: delete directly
-            if sale.payment_status == 'paid':
-                for item in sale.items.all():
-                    product = item.product
-                    product.quantity_in_stock += item.quantity
-                    product.save()
-            sale.delete()
-            messages.success(request, f'Sale #{sale.id} deleted and stock restored.')
-        else:
-            # Staff: create pending request
-            pending = DeletionRequest.objects.filter(
-                object_type='sale', object_id=pk, status='pending'
-            ).first()
-            if pending:
-                messages.warning(request, f"Deletion request for Sale #{sale.id} is already pending approval.")
-            else:
-                DeletionRequest.objects.create(
-                    object_type='sale',
-                    object_id=pk,
-                    object_repr=f"Sale #{sale.id}",
-                    requested_by=request.user
-                )
-                messages.info(request, f"Deletion request for Sale #{sale.id} sent to admin for approval.")
+    
+    # Check if user is staff or admin
+    if not request.user.is_staff and not request.user.is_superuser:
+        messages.error(request, 'You do not have permission to delete sales.')
         return redirect('sale_list')
+    
+    if request.method == 'POST':
+        sale_id = sale.id
+        customer = sale.customer_name or 'Walk-in'
+        
+        # Restore stock if sale was paid
+        if sale.payment_status == 'paid':
+            for item in sale.items.all():
+                product = item.product
+                product.quantity_in_stock += item.quantity
+                product.save()
+        
+        sale.delete()
+        messages.success(request, f'Sale #{sale_id} for {customer} deleted successfully. Stock restored.')
+        return redirect('sale_list')
+    
     return redirect('sale_list')
 
 # ---------- Category CRUD (Admin only) ----------
@@ -370,38 +400,10 @@ def monthly_report(request):
     }
     return render(request, 'pos_app/monthly_report.html', context)
 
+# ---------- Pending Deletions (Admin only) ----------
 @login_required
-@user_passes_test(is_staff_or_admin)  # Allows both Staff and Admin
-def sale_delete(request, pk):
-    sale = get_object_or_404(Sale, pk=pk)
-    
-    # Optional: Check if sale belongs to this staff (if you want to restrict)
-    # if not request.user.is_superuser and sale.created_by != request.user:
-    #     messages.error(request, 'You can only delete sales you created.')
-    #     return redirect('sale_list')
-    
-    if request.method == 'POST':
-        sale_id = sale.id
-        # Restore stock if sale was paid
-        if sale.payment_status == 'paid':
-            for item in sale.items.all():
-                product = item.product
-                product.quantity_in_stock += item.quantity
-                product.save()
-        
-        sale.delete()
-        messages.success(request, f'Sale #{sale_id} deleted successfully.')
-        return redirect('sale_list')
-    
-    return redirect('sale_list')
-
-@login_required
-@user_passes_test(is_admin)  # only superuser or Admin group
+@user_passes_test(is_admin)
 def pending_deletions(request):
-    """
-    Admin page to review and approve/reject deletion requests.
-    """
-    # Handle POST actions
     if request.method == 'POST':
         action = request.POST.get('action')
         request_id = request.POST.get('request_id')
@@ -443,6 +445,5 @@ def pending_deletions(request):
 
         return redirect('pending_deletions')
 
-    # GET: list pending requests
     requests = DeletionRequest.objects.filter(status='pending').order_by('-requested_at')
     return render(request, 'pos_app/pending_deletions.html', {'requests': requests})
