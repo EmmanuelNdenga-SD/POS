@@ -371,6 +371,31 @@ def monthly_report(request):
     return render(request, 'pos_app/monthly_report.html', context)
 
 @login_required
+@user_passes_test(is_staff_or_admin)  # Allows both Staff and Admin
+def sale_delete(request, pk):
+    sale = get_object_or_404(Sale, pk=pk)
+    
+    # Optional: Check if sale belongs to this staff (if you want to restrict)
+    # if not request.user.is_superuser and sale.created_by != request.user:
+    #     messages.error(request, 'You can only delete sales you created.')
+    #     return redirect('sale_list')
+    
+    if request.method == 'POST':
+        sale_id = sale.id
+        # Restore stock if sale was paid
+        if sale.payment_status == 'paid':
+            for item in sale.items.all():
+                product = item.product
+                product.quantity_in_stock += item.quantity
+                product.save()
+        
+        sale.delete()
+        messages.success(request, f'Sale #{sale_id} deleted successfully.')
+        return redirect('sale_list')
+    
+    return redirect('sale_list')
+
+@login_required
 @user_passes_test(is_admin)  # only superuser or Admin group
 def pending_deletions(request):
     """
