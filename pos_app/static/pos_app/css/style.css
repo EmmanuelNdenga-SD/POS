@@ -1,4 +1,9 @@
-/* Dark/Light Theme Variables */
+/* ============================================
+   MAIN STYLESHEET - POS System
+   Black & Gold Theme with Dark/Light Mode
+   ============================================ */
+
+/* ---------- CSS Variables ---------- */
 :root {
     /* Dark theme (default) */
     --bg-primary: #121212;
@@ -7,12 +12,14 @@
     --bg-card: #1E1E1E;
     --text-primary: #E0E0E0;
     --text-secondary: #AAAAAA;
+    --text-muted: #6C757D;
     --border-color: #2C2C2C;
     --accent: #00BCD4;
     --accent-dark: #00838F;
     --accent-light: #4DD0E1;
     --shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     --sidebar-width: 260px;
+    --transition: 0.3s ease;
 }
 
 /* Light theme */
@@ -23,8 +30,9 @@
     --bg-card: #FFFFFF;
     --text-primary: #212121;
     --text-secondary: #555555;
+    --text-muted: #6C757D;
     --border-color: #DDDDDD;
-    --accent: #0288D1; /* blue accent for light */
+    --accent: #0288D1;
     --accent-dark: #01579B;
     --accent-light: #4FC3F7;
     --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -34,13 +42,30 @@
 * {
     box-sizing: border-box;
 }
+
 body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     padding: 0;
-    transition: background-color 0.3s, color 0.3s;
+    transition: background-color var(--transition), color var(--transition);
+}
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-dark);
 }
 
 /* ---------- Sidebar ---------- */
@@ -58,7 +83,7 @@ body {
     box-shadow: var(--shadow);
     z-index: 1000;
     overflow-y: auto;
-    transition: background-color 0.3s, border-color 0.3s;
+    transition: background-color var(--transition), border-color var(--transition);
 }
 
 .sidebar-brand {
@@ -156,7 +181,7 @@ body {
     border: 1px solid var(--border-color);
     cursor: pointer;
     color: var(--text-primary);
-    transition: background 0.3s;
+    transition: background var(--transition);
 }
 .theme-toggle:hover {
     background: var(--border-color);
@@ -175,7 +200,7 @@ body {
     padding: 30px 40px;
     min-height: 100vh;
     background-color: var(--bg-primary);
-    transition: background-color 0.3s;
+    transition: background-color var(--transition);
 }
 
 /* ---------- Cards ---------- */
@@ -185,7 +210,7 @@ body {
     border-radius: 8px;
     color: var(--text-primary);
     margin-bottom: 20px;
-    transition: background-color 0.3s, border-color 0.3s;
+    transition: background-color var(--transition), border-color var(--transition);
 }
 .card-header {
     background-color: var(--bg-secondary);
@@ -241,6 +266,15 @@ body {
 .btn-info {
     background-color: #0288D1;
     border-color: #0277BD;
+}
+.btn-outline-primary {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+.btn-outline-primary:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
 }
 
 /* ---------- Tables ---------- */
@@ -299,6 +333,9 @@ label {
 .bg-info {
     background-color: #0288D1 !important;
 }
+.bg-primary {
+    background-color: var(--accent) !important;
+}
 
 /* ---------- Alerts ---------- */
 .alert {
@@ -335,6 +372,109 @@ a:hover {
     color: var(--accent-light);
     text-decoration: underline;
 }
+
+/* ---------- Product Cards (for product list) ---------- */
+.product-card-inner {
+    transition: transform 0.2s, box-shadow 0.2s;
+    overflow: hidden;
+}
+.product-card-inner:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.product-image-wrapper {
+    position: relative;
+    overflow: hidden;
+    height: 200px;
+    background: #f8f9fa;
+}
+
+.product-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #6c757d;
+}
+
+.stock-badge-overlay {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+.stock-badge-overlay .badge {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.product-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.product-price {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #28a745;
+}
+
+.stock-info {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+.stock-low {
+    color: #dc3545 !important;
+    font-weight: 600;
+}
+.stock-out {
+    color: #721c24 !important;
+    font-weight: 700;
+}
+
+/* ---------- Stats Cards ---------- */
+.bg-opacity-10 {
+    --bs-bg-opacity: 0.1;
+}
+.border-primary.bg-opacity-10 {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+}
+.border-success.bg-opacity-10 {
+    background-color: rgba(40, 167, 69, 0.1) !important;
+}
+.border-warning.bg-opacity-10 {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+.border-danger.bg-opacity-10 {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+.border-info.bg-opacity-10 {
+    background-color: rgba(13, 202, 240, 0.1) !important;
+}
+
+/* ---------- Stats Icons ---------- */
+.stats-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+.stats-icon.bg-primary { background: #0d6efd !important; }
+.stats-icon.bg-success { background: #198754 !important; }
+.stats-icon.bg-info { background: #0dcaf0 !important; }
+.stats-icon.bg-warning { background: #ffc107 !important; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 768px) {

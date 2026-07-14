@@ -1,0 +1,514 @@
+/* ============================================
+   REPORTS SPECIFIC STYLES
+   Daily & Monthly Reports
+   ============================================ */
+
+/* ---------- Report Header ---------- */
+.report-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.report-header h2 {
+    margin-bottom: 0.25rem;
+}
+
+.report-header .text-muted {
+    font-size: 1rem;
+}
+
+/* ---------- Navigation Buttons ---------- */
+.report-nav {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.report-nav .btn {
+    border-radius: 8px;
+    padding: 0.5rem 1.25rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.report-nav .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* ---------- Stat Cards ---------- */
+.stat-card {
+    border-radius: 12px;
+    overflow: hidden;
+    height: 100%;
+    position: relative;
+    color: #fff !important;
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+}
+
+.stat-card .card-body {
+    padding: 1.25rem 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.stat-card .card-title {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.85;
+    margin-bottom: 0.25rem;
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.stat-card .card-text {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff !important;
+    margin-bottom: 0;
+}
+
+.stat-card .stat-icon {
+    position: absolute;
+    right: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 3rem;
+    opacity: 0.15;
+    color: #fff;
+}
+
+/* Stat card colors */
+.stat-card.primary {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca) !important;
+}
+.stat-card.success {
+    background: linear-gradient(135deg, #198754, #157347) !important;
+}
+.stat-card.info {
+    background: linear-gradient(135deg, #0dcaf0, #0bb5d4) !important;
+}
+.stat-card.warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800) !important;
+}
+.stat-card.danger {
+    background: linear-gradient(135deg, #dc3545, #b02a37) !important;
+}
+.stat-card.secondary {
+    background: linear-gradient(135deg, #6c757d, #5a6268) !important;
+}
+.stat-card.purple {
+    background: linear-gradient(135deg, #6f42c1, #5a32a3) !important;
+}
+
+/* ---------- Tables ---------- */
+.report-table {
+    margin-bottom: 0;
+}
+
+.report-table thead th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-top: none;
+    padding: 0.75rem 0.75rem;
+    background-color: var(--bg-secondary);
+    color: var(--accent);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.report-table tbody td {
+    vertical-align: middle;
+    padding: 0.75rem 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.report-table tbody tr:hover {
+    background-color: rgba(0, 188, 212, 0.05);
+}
+
+.report-table tfoot tr {
+    background-color: var(--bg-secondary);
+    font-weight: 600;
+}
+
+.report-table tfoot th,
+.report-table tfoot td {
+    padding: 0.75rem 0.75rem;
+    border-top: 2px solid var(--border-color);
+}
+
+/* ---------- Progress Bars ---------- */
+.progress {
+    background-color: var(--bg-secondary);
+    border-radius: 6px;
+    height: 24px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    transition: width 0.3s ease;
+}
+
+.progress-bar.bg-success {
+    background-color: #198754 !important;
+}
+.progress-bar.bg-info {
+    background-color: #0dcaf0 !important;
+}
+.progress-bar.bg-primary {
+    background-color: #0d6efd !important;
+}
+.progress-bar.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000;
+}
+.progress-bar.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+/* ---------- Badges ---------- */
+.badge {
+    font-weight: 500;
+    padding: 0.4rem 0.7rem;
+}
+
+.badge.bg-success {
+    background-color: #198754 !important;
+}
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000;
+}
+.badge.bg-danger {
+    background-color: #dc3545 !important;
+}
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+    color: #000;
+}
+.badge.bg-primary {
+    background-color: #0d6efd !important;
+}
+.badge.bg-secondary {
+    background-color: #6c757d !important;
+}
+
+/* ---------- Customer Stats ---------- */
+.customer-stats .stat-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.customer-stats .stat-item:last-child {
+    border-bottom: none;
+}
+
+.customer-stats .stat-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.customer-stats .stat-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+/* ---------- Month Summary ---------- */
+.month-summary .summary-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.month-summary .summary-item:last-child {
+    border-bottom: none;
+}
+
+.month-summary .summary-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.month-summary .summary-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+/* ---------- Price Type Breakdown ---------- */
+.price-breakdown .breakdown-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.price-breakdown .breakdown-item:last-child {
+    border-bottom: none;
+}
+
+.price-breakdown .breakdown-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.price-breakdown .breakdown-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+/* ---------- Daily Sales Trend ---------- */
+.trend-container {
+    padding: 0.5rem 0;
+}
+
+.trend-bar-container {
+    display: flex;
+    align-items: center;
+    padding: 0.4rem 0;
+    gap: 0.75rem;
+}
+
+.trend-label {
+    min-width: 45px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: right;
+}
+
+.trend-bar-wrapper {
+    flex: 1;
+    height: 28px;
+    background-color: var(--bg-secondary);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.trend-bar {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #fff;
+    min-width: 30px;
+}
+
+.trend-bar.bg-primary {
+    background: linear-gradient(90deg, #0d6efd, #0a58ca);
+}
+.trend-bar.bg-success {
+    background: linear-gradient(90deg, #198754, #157347);
+}
+.trend-bar.bg-warning {
+    background: linear-gradient(90deg, #ffc107, #e0a800);
+    color: #000;
+}
+.trend-bar.bg-danger {
+    background: linear-gradient(90deg, #dc3545, #b02a37);
+}
+
+.trend-value {
+    min-width: 70px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: right;
+}
+
+/* ---------- Report Footer ---------- */
+.report-footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.report-footer .text-muted {
+    font-size: 0.85rem;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+    .stat-card .card-text {
+        font-size: 1.6rem;
+    }
+    
+    .stat-card .stat-icon {
+        font-size: 2.5rem;
+    }
+    
+    .report-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    
+    .report-nav {
+        margin-top: 0.75rem;
+        width: 100%;
+    }
+    
+    .report-nav .btn {
+        flex: 1;
+        text-align: center;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+    }
+    
+    .trend-bar-container {
+        flex-wrap: wrap;
+        gap: 0.3rem;
+    }
+    
+    .trend-label {
+        min-width: 35px;
+        font-size: 0.7rem;
+    }
+    
+    .trend-value {
+        min-width: 60px;
+        font-size: 0.7rem;
+    }
+    
+    .trend-bar-wrapper {
+        height: 22px;
+    }
+    
+    .trend-bar {
+        font-size: 0.6rem;
+        padding-right: 4px;
+        min-width: 20px;
+    }
+    
+    .report-footer {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+@media (max-width: 576px) {
+    .stat-card .card-text {
+        font-size: 1.3rem;
+    }
+    
+    .stat-card .stat-icon {
+        font-size: 2rem;
+        right: 0.75rem;
+    }
+    
+    .stat-card .card-body {
+        padding: 1rem 1.25rem;
+    }
+    
+    .report-table thead th,
+    .report-table tbody td,
+    .report-table tfoot th,
+    .report-table tfoot td {
+        padding: 0.5rem 0.4rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* ---------- Print ---------- */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .stat-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    .report-table {
+        font-size: 0.8rem;
+    }
+    
+    .report-table thead th {
+        background-color: #f8f9fa !important;
+        color: #000 !important;
+        border-bottom: 2px solid #000 !important;
+    }
+    
+    .report-table tbody td {
+        border-bottom: 1px solid #ddd !important;
+    }
+    
+    .report-table tfoot tr {
+        background-color: #f8f9fa !important;
+    }
+    
+    .stat-card {
+        color: #fff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    .stat-card.primary {
+        background: #0d6efd !important;
+    }
+    .stat-card.success {
+        background: #198754 !important;
+    }
+    .stat-card.info {
+        background: #0dcaf0 !important;
+        color: #000 !important;
+    }
+    .stat-card.warning {
+        background: #ffc107 !important;
+        color: #000 !important;
+    }
+    .stat-card.danger {
+        background: #dc3545 !important;
+    }
+    .stat-card.secondary {
+        background: #6c757d !important;
+    }
+    .stat-card.purple {
+        background: #6f42c1 !important;
+    }
+    
+    .progress {
+        background-color: #e9ecef !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    .progress-bar {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    .badge {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}

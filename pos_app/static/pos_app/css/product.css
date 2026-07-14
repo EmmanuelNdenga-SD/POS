@@ -1,0 +1,217 @@
+/* ============================================
+   PRODUCTS SPECIFIC STYLES
+   Product List & Product Form
+   ============================================ */
+
+/* ---------- Stats Cards ---------- */
+.stat-card {
+    border-radius: 12px;
+    overflow: hidden;
+    height: 100%;
+    position: relative;
+    color: #fff !important;
+}
+.stat-card .card-body {
+    padding: 1.25rem 1.5rem;
+}
+.stat-card .card-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+.stat-card .card-text {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #fff !important;
+    margin-bottom: 0;
+}
+.stat-card .stat-icon {
+    position: absolute;
+    right: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 3rem;
+    opacity: 0.2;
+    color: #fff;
+}
+.stat-card.primary {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca) !important;
+}
+.stat-card.success {
+    background: linear-gradient(135deg, #198754, #157347) !important;
+}
+.stat-card.warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800) !important;
+}
+.stat-card.danger {
+    background: linear-gradient(135deg, #dc3545, #b02a37) !important;
+}
+
+/* ---------- Product Cards ---------- */
+.product-card-inner {
+    transition: transform 0.2s, box-shadow 0.2s;
+    overflow: hidden;
+}
+.product-card-inner:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.product-image-wrapper {
+    position: relative;
+    overflow: hidden;
+    height: 200px;
+    background: #f8f9fa;
+}
+
+.product-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #6c757d;
+}
+
+.stock-badge-overlay {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+.stock-badge-overlay .badge {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.product-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.product-price {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #28a745;
+}
+
+.stock-info {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+.stock-low {
+    color: #dc3545 !important;
+    font-weight: 600;
+}
+.stock-out {
+    color: #721c24 !important;
+    font-weight: 700;
+}
+
+/* ---------- Product Form ---------- */
+.product-form-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.product-form-container .form-label {
+    font-weight: 500;
+}
+
+.product-form-container .form-control,
+.product-form-container .form-select {
+    border-radius: 6px;
+}
+
+.product-form-container .form-control:focus,
+.product-form-container .form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.2rem rgba(0, 188, 212, 0.25);
+}
+
+.product-form-container .form-control[type="file"] {
+    padding: 0.5rem;
+}
+
+.product-form-container .help-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.product-form-container .current-image {
+    max-width: 150px;
+    max-height: 150px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    padding: 4px;
+}
+
+/* ---------- Delete Modal ---------- */
+.delete-modal .modal-content {
+    border-color: #dc3545;
+}
+.delete-modal .modal-header {
+    border-bottom-color: #dc3545;
+}
+.delete-modal .modal-footer {
+    border-top-color: #dc3545;
+}
+
+/* ---------- Empty State ---------- */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+.empty-state .empty-icon {
+    font-size: 4rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+.empty-state h4 {
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+.empty-state .text-muted {
+    color: var(--text-secondary);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+    .stat-card .card-text {
+        font-size: 1.6rem;
+    }
+    .stat-card .stat-icon {
+        font-size: 2.5rem;
+    }
+    .product-image-wrapper {
+        height: 150px;
+    }
+    .product-price {
+        font-size: 1.1rem;
+    }
+    .product-name {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .stat-card .card-text {
+        font-size: 1.3rem;
+    }
+    .stat-card .stat-icon {
+        font-size: 2rem;
+        right: 0.75rem;
+    }
+    .stat-card .card-body {
+        padding: 1rem 1.25rem;
+    }
+}

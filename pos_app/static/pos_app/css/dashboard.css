@@ -8,8 +8,59 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    /* Fallback styles in case CSS doesn't load */
+    .stat-card {
+        border-radius: 12px;
+        overflow: hidden;
+        height: 100%;
+        position: relative;
+        color: #fff !important;
+    }
+    .stat-card .card-body {
+        padding: 1.25rem 1.5rem;
+    }
+    .stat-card .card-title {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.9;
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+    .stat-card .card-text {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #fff !important;
+        margin-bottom: 0;
+    }
+    .stat-card .stat-icon {
+        position: absolute;
+        right: 1.25rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 3rem;
+        opacity: 0.2;
+        color: #fff;
+    }
+    .stat-card.primary {
+        background: linear-gradient(135deg, #0d6efd, #0a58ca) !important;
+    }
+    .stat-card.success {
+        background: linear-gradient(135deg, #198754, #157347) !important;
+    }
+    .stat-card.info {
+        background: linear-gradient(135deg, #0dcaf0, #0bb5d4) !important;
+    }
+    .stat-card.warning {
+        background: linear-gradient(135deg, #ffc107, #e0a800) !important;
+    }
+    .stat-card.danger {
+        background: linear-gradient(135deg, #dc3545, #b02a37) !important;
+    }
+</style>
+
 <!-- Stats Cards -->
-<div class="row g-3 mb-4">
+<div class="row g-3 dashboard-stats">
     <div class="col-xl-3 col-md-6">
         <div class="card stat-card primary">
             <div class="card-body">
@@ -60,38 +111,40 @@
 </div>
 
 <!-- Quick Actions -->
-<div class="card mb-4">
-    <div class="card-body">
-        <h6 class="card-title mb-3">
-            <i class="fas fa-bolt me-2"></i> Quick Actions
-        </h6>
-        <div class="d-flex flex-wrap gap-2">
-            <a href="{% url 'sale_create' %}" class="btn btn-success">
-                <i class="fas fa-plus me-1"></i> New Sale
-            </a>
-            <a href="{% url 'product_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i> Add Product
-            </a>
-            <a href="{% url 'daily_report' %}" class="btn btn-info">
-                <i class="fas fa-calendar-day me-1"></i> Daily Report
-            </a>
-            <a href="{% url 'monthly_report' %}" class="btn btn-secondary">
-                <i class="fas fa-calendar-alt me-1"></i> Monthly Report
-            </a>
+<div class="quick-actions">
+    <div class="card">
+        <div class="card-body">
+            <h6 class="card-title mb-3">
+                <i class="fas fa-bolt me-2"></i> Quick Actions
+            </h6>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'sale_create' %}" class="btn btn-success">
+                    <i class="fas fa-plus me-1"></i> New Sale
+                </a>
+                <a href="{% url 'product_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i> Add Product
+                </a>
+                <a href="{% url 'daily_report' %}" class="btn btn-info">
+                    <i class="fas fa-calendar-day me-1"></i> Daily Report
+                </a>
+                <a href="{% url 'monthly_report' %}" class="btn btn-secondary">
+                    <i class="fas fa-calendar-alt me-1"></i> Monthly Report
+                </a>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Stock Alert -->
-<div class="mb-4">
+<div class="stock-alert">
     {% if low_stock_count > 0 or out_of_stock_count > 0 %}
-        <div class="alert alert-warning border-warning" role="alert">
+        <div class="alert alert-warning" role="alert">
             <div class="d-flex align-items-center">
-                <div class="me-3">
-                    <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                <div class="alert-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
                 </div>
                 <div>
-                    <h5 class="alert-heading mb-1">⚠️ Stock Alert!</h5>
+                    <h5 class="alert-heading">⚠️ Stock Alert!</h5>
                     <p class="mb-0">
                         {% if out_of_stock_count > 0 %}
                             <strong class="text-danger">{{ out_of_stock_count }}</strong> product(s) are <strong class="text-danger">out of stock</strong>
@@ -110,13 +163,13 @@
             </div>
         </div>
     {% else %}
-        <div class="alert alert-success border-success" role="alert">
+        <div class="alert alert-success" role="alert">
             <div class="d-flex align-items-center">
-                <div class="me-3">
-                    <i class="fas fa-check-circle fa-2x text-success"></i>
+                <div class="alert-icon">
+                    <i class="fas fa-check-circle"></i>
                 </div>
                 <div>
-                    <h5 class="alert-heading mb-1">✅ All Products Stocked</h5>
+                    <h5 class="alert-heading">✅ All Products Stocked</h5>
                     <p class="mb-0">All products are well stocked. No low stock or out of stock items.</p>
                 </div>
             </div>
@@ -127,7 +180,7 @@
 <!-- Recent Sales & Quick Stats -->
 <div class="row g-3">
     <div class="col-lg-8">
-        <div class="card">
+        <div class="card recent-sales">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="mb-0"><i class="fas fa-receipt me-2"></i> Recent Sales</h6>
                 <a href="{% url 'sale_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
@@ -174,48 +227,88 @@
     </div>
     
     <div class="col-lg-4">
-        <div class="card">
+        <div class="card quick-stats">
             <div class="card-header">
                 <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i> Quick Stats</h6>
             </div>
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                    <span class="text-muted">Today's Sales</span>
-                    <strong>{{ today_sales_count }}</strong>
+                <div class="stat-item d-flex justify-content-between align-items-center">
+                    <span class="stat-label">Today's Sales</span>
+                    <span class="stat-value">{{ today_sales_count }}</span>
                 </div>
-                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                    <span class="text-muted">Today's Revenue</span>
-                    <strong>KSh {{ today_revenue|floatformat:0 }}</strong>
+                <div class="stat-item d-flex justify-content-between align-items-center">
+                    <span class="stat-label">Today's Revenue</span>
+                    <span class="stat-value">KSh {{ today_revenue|floatformat:0 }}</span>
                 </div>
-                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                    <span class="text-muted">Average Order Value</span>
-                    <strong>KSh {{ avg_order_value|floatformat:0 }}</strong>
+                <div class="stat-item d-flex justify-content-between align-items-center">
+                    <span class="stat-label">Average Order Value</span>
+                    <span class="stat-value">KSh {{ avg_order_value|floatformat:0 }}</span>
                 </div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="text-muted">Total Customers</span>
-                    <strong>{{ total_customers }}</strong>
+                <div class="stat-item d-flex justify-content-between align-items-center">
+                    <span class="stat-label">Total Customers</span>
+                    <span class="stat-value">{{ total_customers }}</span>
                 </div>
             </div>
         </div>
         
-        <!-- Top Products Card -->
+        <!-- Sales Chart -->
         <div class="card mt-3">
             <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-trophy me-2"></i> Top Products</h6>
+                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i> Last 7 Days Sales</h6>
             </div>
             <div class="card-body">
-                {% if top_products %}
-                    {% for item in top_products %}
-                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                            <span>{{ item.product__name }}</span>
-                            <span class="badge bg-primary">{{ item.total_quantity }} sold</span>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted text-center mb-0">No products sold yet.</p>
-                {% endif %}
+                <div class="sales-chart-container">
+                    <canvas id="salesChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Sales Chart
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        const chartData = {{ chart_data|safe }};
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: 'Sales (KSh)',
+                    data: chartData.values,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    tension: 0.3,
+                    fill: true,
+                    pointBackgroundColor: '#0d6efd',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'KSh ' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
 {% endblock %}

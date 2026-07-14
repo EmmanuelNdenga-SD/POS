@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, Avg
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.http import JsonResponse
@@ -34,6 +34,23 @@ def dashboard(request):
     low_stock = Product.objects.filter(quantity_in_stock__lt=10, quantity_in_stock__gt=0).count()
     out_of_stock = Product.objects.filter(quantity_in_stock=0).count()
     
+    # Recent sales (last 5)
+    recent_sales = Sale.objects.filter(payment_status='paid').order_by('-created_at')[:5]
+    
+    # Today's stats
+    today = timezone.now().date()
+    today_sales = Sale.objects.filter(created_at__date=today, payment_status='paid')
+    today_sales_count = today_sales.count()
+    today_revenue = today_sales.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    
+    # Average order value
+    avg_order_value = Sale.objects.filter(payment_status='paid').aggregate(
+        Avg('total_amount')
+    )['total_amount__avg'] or 0
+    
+    # Total customers
+    total_customers = Sale.objects.filter(payment_status='paid').values('customer_name').distinct().count()
+    
     context = {
         'total_products': total_products,
         'total_sales': total_sales,
@@ -41,6 +58,11 @@ def dashboard(request):
         'pending_sales': pending_sales,
         'low_stock_count': low_stock,
         'out_of_stock_count': out_of_stock,
+        'recent_sales': recent_sales,
+        'today_sales_count': today_sales_count,
+        'today_revenue': today_revenue,
+        'avg_order_value': avg_order_value,
+        'total_customers': total_customers,
     }
     return render(request, 'pos_app/dashboard.html', context)
 
@@ -175,7 +197,13 @@ def product_create(request):
             return redirect('product_list')
     else:
         form = ProductForm()
-    return render(request, 'pos_app/product_form.html', {'form': form, 'title': 'Add Product'})
+    
+    categories = Category.objects.all()
+    return render(request, 'pos_app/product_form.html', {
+        'form': form, 
+        'title': 'Add Product',
+        'categories': categories
+    })
 
 @login_required
 @user_passes_test(is_staff_or_admin)
@@ -189,7 +217,14 @@ def product_update(request, pk):
             return redirect('product_list')
     else:
         form = ProductForm(instance=product)
-    return render(request, 'pos_app/product_form.html', {'form': form, 'title': 'Edit Product'})
+    
+    categories = Category.objects.all()
+    return render(request, 'pos_app/product_form.html', {
+        'form': form, 
+        'title': 'Edit Product',
+        'product': product,
+        'categories': categories
+    })
 
 @login_required
 @user_passes_test(is_staff_or_admin)
@@ -229,52 +264,130 @@ def sale_list(request):
 @login_required
 @user_passes_test(is_staff_or_admin)
 def sale_create(request):
-    if request.method == 'POST':
+    # Initialize cart in session if not exists
+    if 'cart' not in request.session:
+        request.session['cart'] = []
+    
+    # Handle adding item to cart
+    if request.method == 'POST' and 'add_item' in request.POST:
+        # Get product ID from hidden field (set by datalist selection)
+        product_id = request.POST.get('product_id')
+        
+        # If product_id is empty, try to get from search field
+        if not product_id:
+            search_value = request.POST.get('product_search', '')
+            if '|' in search_value:
+                product_id = search_value.split('|')[0]
+        
+        if not product_id:
+            messages.error(request, 'Please select a product from the search results.')
+            return redirect('sale_create')
+        
+        product = get_object_or_404(Product, pk=product_id)
+        quantity = int(request.POST.get('quantity', 1))
+        price_type = request.POST.get('price_type', 'retail')
+        
+        # Check stock
+        if product.quantity_in_stock < quantity:
+            messages.error(request, f"Insufficient stock for {product.name}. Available: {product.quantity_in_stock}")
+            return redirect('sale_create')
+        
+        # Get price based on type
+        price = product.wholesale_price if price_type == 'wholesale' else product.price
+        
+        # Add to cart
+        cart = request.session['cart']
+        
+        # Check if product already in cart with same price type
+        found = False
+        for item in cart:
+            if item['product_id'] == product.id and item['price_type'] == price_type:
+                item['quantity'] += quantity
+                found = True
+                break
+        
+        if not found:
+            cart.append({
+                'product_id': product.id,
+                'product_name': product.name,
+                'quantity': quantity,
+                'price_at_sale': float(price),
+                'price_type': price_type,
+                'subtotal': float(price) * quantity
+            })
+        
+        request.session['cart'] = cart
+        messages.success(request, f"Added {quantity} x {product.name} to cart.")
+        return redirect('sale_create')
+    
+    # Handle completing sale
+    if request.method == 'POST' and 'complete_sale' in request.POST:
+        cart = request.session.get('cart', [])
+        
+        if not cart:
+            messages.error(request, 'Cart is empty. Add some products first.')
+            return redirect('sale_create')
+        
+        # Get form data
         sale_form = SaleForm(request.POST)
         if sale_form.is_valid():
             sale = sale_form.save(commit=False)
             sale.created_by = request.user
+            sale.customer_name = 'Walk-in'
             sale.total_amount = 0
             sale.save()
-
-            product_ids = request.POST.getlist('product_id')
-            quantities = request.POST.getlist('quantity')
-            price_types = request.POST.getlist('price_type')
             
             total = 0
-            for pid, qty, ptype in zip(product_ids, quantities, price_types):
-                if pid and qty and int(qty) > 0:
-                    product = get_object_or_404(Product, pk=pid)
-                    qty = int(qty)
-                    
-                    # Choose price based on type
-                    if ptype == 'wholesale':
-                        price = product.wholesale_price
-                    else:
-                        price = product.price  # retail
-                    
-                    if sale.payment_status == 'paid' and product.quantity_in_stock < qty:
-                        messages.error(request, f"Insufficient stock for {product.name}. Available: {product.quantity_in_stock}")
-                        sale.delete()
-                        return redirect('sale_create')
-                    
-                    SaleItem.objects.create(
-                        sale=sale,
-                        product=product,
-                        quantity=qty,
-                        price_at_sale=price,
-                        price_type=ptype
-                    )
-                    total += price * qty
-                    
+            for item in cart:
+                product = get_object_or_404(Product, pk=item['product_id'])
+                qty = item['quantity']
+                price = item['price_at_sale']
+                price_type = item['price_type']
+                
+                # Check stock again
+                if sale.payment_status == 'paid' and product.quantity_in_stock < qty:
+                    messages.error(request, f"Insufficient stock for {product.name}. Available: {product.quantity_in_stock}")
+                    sale.delete()
+                    return redirect('sale_create')
+                
+                SaleItem.objects.create(
+                    sale=sale,
+                    product=product,
+                    quantity=qty,
+                    price_at_sale=price,
+                    price_type=price_type
+                )
+                total += price * qty
+            
             sale.total_amount = total
             sale.save()
+            
+            # Clear cart
+            request.session['cart'] = []
             messages.success(request, f'Sale #{sale.id} created successfully.')
             return redirect('sale_list')
-    else:
-        sale_form = SaleForm()
+        else:
+            messages.error(request, 'Please fill in all required fields.')
+    
+    # Get cart items for display
+    cart_items = []
+    total_amount = 0
+    for item in request.session.get('cart', []):
+        item['subtotal'] = item['price_at_sale'] * item['quantity']
+        total_amount += item['subtotal']
+        cart_items.append(item)
+    
+    # Prepare form
+    sale_form = SaleForm()
     products = Product.objects.all()
-    return render(request, 'pos_app/sale_form.html', {'sale_form': sale_form, 'products': products})
+    
+    context = {
+        'sale_form': sale_form,
+        'products': products,
+        'cart_items': cart_items,
+        'total_amount': total_amount,
+    }
+    return render(request, 'pos_app/sale_form.html', context)
 
 @login_required
 @user_passes_test(is_staff_or_admin)
@@ -312,38 +425,46 @@ def sale_delete(request, pk):
     
     return redirect('sale_list')
 
-# ---------- Category CRUD (Admin only) ----------
+# ---------- Category CRUD (Staff & Admin) ----------
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_staff_or_admin)  # Changed from is_admin to is_staff_or_admin
 def category_list(request):
     categories = Category.objects.annotate(product_count=models.Count('products'))
     return render(request, 'pos_app/category_list.html', {'categories': categories})
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_staff_or_admin)  # Changed from is_admin to is_staff_or_admin
 def category_create(request):
     if request.method == 'POST':
         form = CategoryForm(request.POST)
         if form.is_valid():
             category = form.save()
+            # Check if it's an AJAX request (for the modal)
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': True,
                     'id': category.id,
                     'name': category.name,
                 })
-            messages.success(request, 'Category created.')
+            # Regular form submission (fallback)
+            messages.success(request, f'Category "{category.name}" created successfully.')
             return redirect('product_create')
         else:
+            # If AJAX, return errors as JSON
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': False,
                     'errors': form.errors,
                 }, status=400)
-    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+            # Regular form submission with errors
+            messages.error(request, 'Please correct the errors below.')
+            return redirect('product_create')
+    
+    # GET request - not expected, but handle gracefully
+    return redirect('product_create')
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_staff_or_admin)  # Changed from is_admin to is_staff_or_admin
 def category_delete(request, pk):
     category = get_object_or_404(Category, pk=pk)
     if request.method == 'POST':
@@ -362,41 +483,190 @@ def category_delete(request, pk):
 @login_required
 @user_passes_test(is_staff_or_admin)
 def daily_report(request):
-    today = timezone.now().date()
-    start = datetime.combine(today, datetime.min.time())
-    end = datetime.combine(today, datetime.max.time())
+    # Get date from query parameter or use today
+    date_str = request.GET.get('date')
+    if date_str:
+        try:
+            report_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            report_date = timezone.now().date()
+    else:
+        report_date = timezone.now().date()
+    
+    # Date range for the day
+    start = datetime.combine(report_date, datetime.min.time())
+    end = datetime.combine(report_date, datetime.max.time())
+    
+    # Get sales for the day
     sales = Sale.objects.filter(created_at__range=(start, end), payment_status='paid')
-    total = sales.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    count = sales.count()
-    products = Product.objects.all()
+    
+    # Total sales and count
+    total_sales = sales.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    sales_count = sales.count()
+    
+    # Average order value
+    avg_order = sales.aggregate(Avg('total_amount'))['total_amount__avg'] or 0
+    
+    # Total items sold
+    total_items_sold = SaleItem.objects.filter(sale__in=sales).aggregate(Sum('quantity'))['quantity__sum'] or 0
+    
+    # Payment method breakdown
+    payment_breakdown = []
+    payment_methods = ['cash', 'mpesa', 'bank']
+    method_labels = {'cash': 'Cash', 'mpesa': 'M-Pesa', 'bank': 'Bank Transfer'}
+    
+    for method in payment_methods:
+        method_sales = sales.filter(payment_method=method)
+        method_count = method_sales.count()
+        method_total = method_sales.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        
+        if method_count > 0 or method_total > 0:
+            payment_breakdown.append({
+                'method': method,
+                'label': method_labels.get(method, method.title()),
+                'count': method_count,
+                'total': method_total,
+                'percentage': round((method_total / total_sales * 100) if total_sales > 0 else 0, 1)
+            })
+    
+    # Top selling products
+    top_products = SaleItem.objects.filter(sale__in=sales).values(
+        'product__name', 'product__category__name', 'price_type'
+    ).annotate(
+        total_quantity=Sum('quantity'),
+        total_revenue=Sum('price_at_sale') * Sum('quantity')
+    ).order_by('-total_quantity')[:10]
+    
+    # Previous and next dates for navigation
+    previous_date = report_date - timedelta(days=1)
+    next_date = report_date + timedelta(days=1)
+    
     context = {
-        'date': today,
-        'total_sales': total,
-        'sales_count': count,
+        'date': report_date,
+        'total_sales': total_sales,
+        'sales_count': sales_count,
+        'avg_order': avg_order,
+        'total_items_sold': total_items_sold,
         'sales': sales,
-        'products': products,
+        'payment_breakdown': payment_breakdown,
+        'top_products': top_products,
+        'previous_date': previous_date.strftime('%Y-%m-%d'),
+        'next_date': next_date.strftime('%Y-%m-%d'),
     }
     return render(request, 'pos_app/daily_report.html', context)
 
 @login_required
 @user_passes_test(is_staff_or_admin)
 def monthly_report(request):
-    now = timezone.now()
-    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    if start.month == 12:
-        end = start.replace(year=start.year+1, month=1, day=1) - timedelta(days=1)
+    # Get month from query parameter or use current month
+    month_str = request.GET.get('month')
+    if month_str:
+        try:
+            report_date = datetime.strptime(month_str, '%Y-%m').date()
+        except ValueError:
+            report_date = timezone.now().date()
     else:
-        end = start.replace(month=start.month+1) - timedelta(days=1)
+        report_date = timezone.now().date()
+    
+    # Get first day of the month - FIXED: use datetime.combine
+    start = datetime.combine(report_date.replace(day=1), datetime.min.time())
+    
+    # Get last day of the month - FIXED: use datetime.combine
+    if start.month == 12:
+        end = datetime.combine(start.replace(year=start.year+1, month=1, day=1), datetime.min.time()) - timedelta(seconds=1)
+    else:
+        end = datetime.combine(start.replace(month=start.month+1, day=1), datetime.min.time()) - timedelta(seconds=1)
+    
+    # Get sales for the month
     sales = Sale.objects.filter(created_at__range=(start, end), payment_status='paid')
-    total = sales.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-    count = sales.count()
-    products = Product.objects.all()
+    
+    # Total sales and count
+    total_sales = sales.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    sales_count = sales.count()
+    
+    # Average order value
+    avg_order = sales.aggregate(Avg('total_amount'))['total_amount__avg'] or 0
+    
+    # Total items sold
+    total_items_sold = SaleItem.objects.filter(sale__in=sales).aggregate(Sum('quantity'))['quantity__sum'] or 0
+    
+    # Customer stats
+    total_customers = sales.values('customer_name').distinct().count()
+    new_customers = sales.filter(customer_name__isnull=False).values('customer_name').distinct().count()
+    repeat_customers = total_customers - new_customers
+    
+    # Days with sales
+    days_with_sales = sales.values('created_at__date').distinct().count()
+    days_in_month = (end - start).days + 1
+    
+    # Best day
+    best_day_data = sales.values('created_at__date').annotate(
+        daily_total=Sum('total_amount')
+    ).order_by('-daily_total').first()
+    best_day = best_day_data['created_at__date'] if best_day_data else None
+    best_day_total = best_day_data['daily_total'] if best_day_data else 0
+    
+    # Payment breakdown
+    payment_breakdown = []
+    payment_methods = ['cash', 'mpesa', 'bank']
+    method_labels = {'cash': 'Cash', 'mpesa': 'M-Pesa', 'bank': 'Bank Transfer'}
+    
+    for method in payment_methods:
+        method_sales = sales.filter(payment_method=method)
+        method_count = method_sales.count()
+        method_total = method_sales.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        
+        if method_count > 0 or method_total > 0:
+            payment_breakdown.append({
+                'method': method,
+                'label': method_labels.get(method, method.title()),
+                'count': method_count,
+                'total': method_total,
+                'percentage': round((method_total / total_sales * 100) if total_sales > 0 else 0, 1)
+            })
+    
+    # Retail vs Wholesale
+    retail_sales = SaleItem.objects.filter(sale__in=sales, price_type='retail').aggregate(
+        total=Sum('price_at_sale') * Sum('quantity')
+    )['total'] or 0
+    
+    wholesale_sales = SaleItem.objects.filter(sale__in=sales, price_type='wholesale').aggregate(
+        total=Sum('price_at_sale') * Sum('quantity')
+    )['total'] or 0
+    
+    # Top products
+    top_products = SaleItem.objects.filter(sale__in=sales).values(
+        'product__name', 'product__category__name', 'price_type'
+    ).annotate(
+        total_quantity=Sum('quantity'),
+        total_revenue=Sum('price_at_sale') * Sum('quantity')
+    ).order_by('-total_quantity')[:10]
+    
+    # Navigation
+    prev_month = start - timedelta(days=1)
+    next_month = end + timedelta(days=1)
+    
     context = {
-        'month': start.strftime('%B %Y'),
-        'total_sales': total,
-        'sales_count': count,
+        'month': start.strftime('%B'),
+        'year': start.year,
+        'total_sales': total_sales,
+        'sales_count': sales_count,
+        'avg_order': avg_order,
+        'total_items_sold': total_items_sold,
+        'total_customers': total_customers,
+        'new_customers': new_customers,
+        'repeat_customers': repeat_customers,
+        'days_with_sales': days_with_sales,
+        'days_in_month': days_in_month,
+        'best_day': best_day,
+        'best_day_total': best_day_total,
+        'payment_breakdown': payment_breakdown,
+        'retail_sales': retail_sales,
+        'wholesale_sales': wholesale_sales,
+        'top_products': top_products,
         'sales': sales,
-        'products': products,
+        'previous_month': prev_month.strftime('%Y-%m'),
+        'next_month': next_month.strftime('%Y-%m'),
     }
     return render(request, 'pos_app/monthly_report.html', context)
 

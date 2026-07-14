@@ -1,7 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{% static 'pos_app/css/style.css' %}">
+    {% block extra_css %}{% endblock %}
     <script>
         // Toggle theme and save preference
         function toggleTheme() {
@@ -50,36 +50,35 @@
         </div>
 
         <ul class="sidebar-nav">
-            <!-- Dashboard -->
             <li>
                 <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
                     <i class="fas fa-chart-pie"></i> Dashboard
                 </a>
             </li>
-
             {% if user.is_authenticated %}
-                <!-- Pending Deletions – only for admins (superuser or Admin group) -->
-                {% if user.is_superuser or user.groups.all.0.name == 'Admin' %}
-                    <li>
-                        <a class="nav-link {% if request.resolver_match.url_name == 'pending_deletions' %}active{% endif %}" href="{% url 'pending_deletions' %}">
-                            <i class="fas fa-bell"></i> Pending Deletions
-                            {% if pending_deletions_count > 0 %}
-                                <span class="badge bg-danger float-end">{{ pending_deletions_count }}</span>
-                            {% endif %}
-                        </a>
-                    </li>
-                {% endif %}
-
-                <!-- Products – staff & admins -->
-                {% if user.is_staff %}
+                <!-- Products - Visible to Staff AND Admin -->
+                {% if user.is_staff or user.is_superuser %}
                     <li>
                         <a class="nav-link {% if 'product' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'product_list' %}">
                             <i class="fas fa-boxes"></i> Products
                         </a>
                     </li>
                 {% endif %}
-
-                <!-- Sales, Reports – all logged‑in staff -->
+                
+                <!-- Categories - Admin only -->
+                {% if user.is_superuser or user.groups.all.0.name == 'Admin' %}
+                    <li>
+                        <a class="nav-link {% if 'category' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'category_list' %}">
+                            <i class="fas fa-tags"></i> Categories
+                        </a>
+                    </li>
+                    <li>
+                        <a class="nav-link {% if 'pending_deletions' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'pending_deletions' %}">
+                            <i class="fas fa-clock"></i> Pending Deletions
+                        </a>
+                    </li>
+                {% endif %}
+                
                 <li>
                     <a class="nav-link {% if 'sale' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'sale_list' %}">
                         <i class="fas fa-shopping-cart"></i> Sales
@@ -109,23 +108,11 @@
             {% if user.is_authenticated %}
                 <div class="user-info">
                     <i class="fas fa-user-circle"></i> <strong>{{ user.username }}</strong><br>
-                    <small style="color: var(--text-secondary);">
-                        {% if user.is_superuser %}
-                            Administrator
-                        {% elif user.is_staff %}
-                            Staff
-                        {% else %}
-                            User
-                        {% endif %}
-                    </small>
+                    <small style="color: var(--text-secondary);">{% if user.is_superuser %}Administrator{% elif user.is_staff %}Staff{% elif user.groups.all.0.name %}Staff{% else %}User{% endif %}</small>
                 </div>
-                <!-- Logout as POST form -->
-                <form method="post" action="{% url 'logout' %}" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="logout-link" style="background:none; border:none; padding:0; color:var(--text-secondary); cursor:pointer; width:100%; text-align:left; font-size:inherit; font-family:inherit;">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
-                </form>
+                <a class="logout-link" href="{% url 'logout' %}">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
             {% else %}
                 <a class="logout-link" href="{% url 'login' %}">
                     <i class="fas fa-sign-in-alt"></i> Login
@@ -140,7 +127,7 @@
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                     {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             {% endfor %}
         {% endif %}
@@ -148,5 +135,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

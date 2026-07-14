@@ -1,20 +1,49 @@
 {% extends 'pos_app/base.html' %}
+{% load static %}
+
 {% block title %}Categories{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'pos_app/css/products.css' %}">
+{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="fas fa-tags me-2"></i> Manage Categories</h2>
-    <a href="{% url 'category_create' %}" class="btn btn-primary">
-        <i class="fas fa-plus me-1"></i> Add Category
+    <a href="{% url 'product_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Add Product
     </a>
 </div>
 
-<!-- Display messages (success/error) -->
+<!-- Search + Dropdown -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-12">
+                <label class="form-label">
+                    <i class="fas fa-search me-1"></i> Search Categories
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-filter"></i></span>
+                    <input type="text" id="categorySearch" class="form-control" 
+                           placeholder="Type to filter categories..." 
+                           onkeyup="filterCategoryTable()">
+                </div>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Type to filter the list below
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Display messages -->
 {% if messages %}
     {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
             {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     {% endfor %}
 {% endif %}
@@ -22,7 +51,7 @@
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover" id="categoryTable">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -33,23 +62,27 @@
                 </thead>
                 <tbody>
                     {% for category in categories %}
-                    <tr>
+                    <tr class="category-row" data-name="{{ category.name|lower }}">
                         <td>{{ forloop.counter }}</td>
                         <td><strong>{{ category.name }}</strong></td>
-                        <td>{{ category.product_count }}</td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-danger" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#deleteModal"
-                                    data-category-id="{{ category.id }}"
-                                    data-category-name="{{ category.name }}"
-                                    data-product-count="{{ category.product_count }}">
-                                <i class="fas fa-trash me-1"></i> Delete
-                            </button>
+                            <span class="badge bg-primary">{{ category.product_count }}</span>
+                            {% for product in category.products.all|slice:":3" %}
+                                <span class="badge bg-secondary ms-1">{{ product.name }}</span>
+                            {% endfor %}
+                            {% if category.products.count > 3 %}
+                                <span class="badge bg-secondary ms-1">+{{ category.products.count|add:"-3" }} more</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'category_delete' category.id %}" class="btn btn-sm btn-danger"
+                               onclick="return confirm('Are you sure you want to delete this category?')">
+                                <i class="fas fa-trash"></i>
+                            </a>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="text-center">No categories found. <a href="{% url 'category_create' %}">Add one now</a>.</td></tr>
+                    <tr><td colspan="4" class="text-center">No categories found. <a href="{% url 'product_create' %}">Add one now</a>.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -57,76 +90,19 @@
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">
-                    <i class="fas fa-exclamation-triangle text-danger me-2"></i> Confirm Deletion
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete the category <strong id="deleteCategoryName"></strong>?</p>
-                <div id="deleteWarning" class="alert alert-warning d-none">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    This category contains <span id="deleteProductCount">0</span> product(s). 
-                    You must reassign or delete them before you can remove this category.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="post" id="deleteForm">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger" id="confirmDeleteBtn">
-                        <i class="fas fa-trash me-1"></i> Delete Category
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const deleteModal = document.getElementById('deleteModal');
-        const deleteForm = document.getElementById('deleteForm');
-        const categoryNameSpan = document.getElementById('deleteCategoryName');
-        const productCountSpan = document.getElementById('deleteProductCount');
-        const warningDiv = document.getElementById('deleteWarning');
-        const confirmBtn = document.getElementById('confirmDeleteBtn');
-
-        deleteModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const categoryId = button.getAttribute('data-category-id');
-            const categoryName = button.getAttribute('data-category-name');
-            const productCount = parseInt(button.getAttribute('data-product-count')) || 0;
-
-            // Update modal content
-            categoryNameSpan.textContent = categoryName;
-            productCountSpan.textContent = productCount;
-
-            // Set form action using Django URL (you must have the url name 'category_delete')
-            deleteForm.action = `{% url 'category_delete' 0 %}`.replace('0', categoryId);
-
-            // Show/hide warning and disable button if products exist
-            if (productCount > 0) {
-                warningDiv.classList.remove('d-none');
-                confirmBtn.disabled = true;
-                confirmBtn.title = 'Cannot delete categories with products.';
+    function filterCategoryTable() {
+        const searchTerm = document.getElementById('categorySearch').value.toLowerCase().trim();
+        const rows = document.querySelectorAll('.category-row');
+        
+        rows.forEach(row => {
+            const name = row.dataset.name || '';
+            if (searchTerm === '' || name.includes(searchTerm)) {
+                row.style.display = '';
             } else {
-                warningDiv.classList.add('d-none');
-                confirmBtn.disabled = false;
-                confirmBtn.title = '';
+                row.style.display = 'none';
             }
         });
-
-        // Reset when modal is closed
-        deleteModal.addEventListener('hidden.bs.modal', function() {
-            deleteForm.action = '';
-            confirmBtn.disabled = false;
-        });
-    });
+    }
 </script>
 {% endblock %}

@@ -1,34 +1,72 @@
 {% extends 'pos_app/base.html' %}
+{% load static %}
+
 {% block title %}Products{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'pos_app/css/products.css' %}">
+{% endblock %}
 
 {% block content %}
 <!-- Stats Bar -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card bg-primary bg-opacity-10 border-primary">
+        <div class="card stat-card primary">
             <div class="card-body">
-                <h6 class="card-title text-muted mb-1">Total Products</h6>
-                <h3 class="mb-0">{{ products|length }}</h3>
+                <h6 class="card-title">Total Products</h6>
+                <p class="card-text">{{ products|length }}</p>
+                <div class="stat-icon">
+                    <i class="fas fa-boxes"></i>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-success bg-opacity-10 border-success">
+        <div class="card stat-card success">
             <div class="card-body">
-                <h6 class="card-title text-muted mb-1">In Stock</h6>
-                <h3 class="mb-0">{{ in_stock_count }}</h3>
+                <h6 class="card-title">In Stock</h6>
+                <p class="card-text">{{ in_stock_count }}</p>
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-warning bg-opacity-10 border-warning">
+        <div class="card stat-card warning">
             <div class="card-body">
-                <h6 class="card-title text-muted mb-1">Low Stock (< 10)</h6>
-                <h3 class="mb-0">{{ low_stock_count }}</h3>
+                <h6 class="card-title">Low Stock (< 10)</h6>
+                <p class="card-text">{{ low_stock_count }}</p>
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
             </div>
         </div>
     </div>
-    <!-- Stock Alert Disclaimer -->
+    <div class="col-md-3">
+        <div class="card stat-card danger">
+            <div class="card-body">
+                <h6 class="card-title">Out of Stock</h6>
+                <p class="card-text">{{ out_of_stock_count }}</p>
+                <div class="stat-icon">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Display messages -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Stock Alert -->
 {% if low_stock_count > 0 or out_of_stock_count > 0 %}
 <div class="alert alert-warning border-warning mb-4" role="alert">
     <div class="d-flex align-items-center">
@@ -55,60 +93,6 @@
     </div>
 </div>
 {% endif %}
-    <div class="col-md-3">
-        <div class="card bg-danger bg-opacity-10 border-danger">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-1">Out of Stock</h6>
-                <h3 class="mb-0">{{ out_of_stock_count }}</h3>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Display messages -->
-{% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    {% endfor %}
-{% endif %}
-
-<!-- Search & Filters -->
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label">Search Products</label>
-                <input type="text" id="searchInput" class="form-control" placeholder="Search by name or category...">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Category</label>
-                <select id="categoryFilter" class="form-select">
-                    <option value="">All Categories</option>
-                    {% for category in categories %}
-                        <option value="{{ category.id }}">{{ category.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Stock Status</label>
-                <select id="stockFilter" class="form-select">
-                    <option value="all">All</option>
-                    <option value="in_stock">In Stock</option>
-                    <option value="low_stock">Low Stock (< 10)</option>
-                    <option value="out_of_stock">Out of Stock</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-secondary w-100" onclick="resetFilters()">
-                    <i class="fas fa-undo me-1"></i> Reset
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Product Grid -->
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -120,10 +104,7 @@
 
 <div class="row g-4" id="productGrid">
     {% for product in products %}
-    <div class="col-xl-3 col-lg-4 col-md-6 product-card" 
-         data-name="{{ product.name|lower }}"
-         data-category="{{ product.category.id }}"
-         data-stock="{{ product.quantity_in_stock }}">
+    <div class="col-xl-3 col-lg-4 col-md-6 product-card">
         <div class="card h-100 product-card-inner">
             <!-- Image -->
             <div class="product-image-wrapper">
@@ -162,7 +143,7 @@
                     </span>
                 </div>
                 
-                <!-- Stock Info with red for low stock -->
+                <!-- Stock Info -->
                 <div class="stock-info {% if product.quantity_in_stock <= 5 and product.quantity_in_stock > 0 %}stock-low{% elif product.quantity_in_stock <= 0 %}stock-out{% endif %}">
                     <i class="fas fa-boxes me-1"></i>
                     {{ product.quantity_in_stock }} units
@@ -175,227 +156,26 @@
                     <a href="{% url 'product_update' product.id %}" class="btn btn-sm btn-primary flex-fill">
                         <i class="fas fa-edit me-1"></i> Edit
                     </a>
-                    <button type="button" class="btn btn-sm btn-danger"
-                            data-bs-toggle="modal"
-                            data-bs-target="#deleteModal"
-                            data-product-id="{{ product.id }}"
-                            data-product-name="{{ product.name }}">
+                    <a href="{% url 'product_delete' product.id %}" class="btn btn-sm btn-danger">
                         <i class="fas fa-trash"></i>
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>
     </div>
     {% empty %}
-    <div class="col-12 text-center py-5">
-        <i class="fas fa-box-open fa-3x text-muted mb-3 d-block"></i>
-        <h4>No Products Found</h4>
-        <p class="text-muted">Add your first product to get started.</p>
-        <a href="{% url 'product_create' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i> Add Product
-        </a>
+    <div class="col-12">
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-box-open"></i>
+            </div>
+            <h4>No Products Found</h4>
+            <p class="text-muted">Add your first product to get started.</p>
+            <a href="{% url 'product_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> Add Product
+            </a>
+        </div>
     </div>
     {% endfor %}
 </div>
-
-<!-- Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">
-                    <i class="fas fa-exclamation-triangle text-danger me-2"></i> Confirm Deletion
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete the product <strong id="deleteProductName"></strong>?</p>
-                <p class="text-muted">This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="post" id="deleteForm">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash me-1"></i> Delete Product
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Delete modal setup
-        const deleteModal = document.getElementById('deleteModal');
-        const deleteForm = document.getElementById('deleteForm');
-        const productNameSpan = document.getElementById('deleteProductName');
-
-        deleteModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const productId = button.getAttribute('data-product-id');
-            const productName = button.getAttribute('data-product-name');
-            productNameSpan.textContent = productName;
-            deleteForm.action = `{% url 'product_delete' 0 %}`.replace('0', productId);
-        });
-
-        deleteModal.addEventListener('hidden.bs.modal', function() {
-            deleteForm.action = '';
-        });
-
-        // Search & Filter functionality
-        const searchInput = document.getElementById('searchInput');
-        const categoryFilter = document.getElementById('categoryFilter');
-        const stockFilter = document.getElementById('stockFilter');
-        const productCards = document.querySelectorAll('.product-card');
-
-        function filterProducts() {
-            const searchTerm = searchInput.value.toLowerCase().trim();
-            const categoryId = categoryFilter.value;
-            const stockStatus = stockFilter.value;
-
-            productCards.forEach(card => {
-                const name = card.dataset.name || '';
-                const category = card.dataset.category || '';
-                const stock = parseInt(card.dataset.stock) || 0;
-                
-                let show = true;
-
-                // Search filter
-                if (searchTerm && !name.includes(searchTerm)) {
-                    show = false;
-                }
-
-                // Category filter
-                if (show && categoryId && category !== categoryId) {
-                    show = false;
-                }
-
-                // Stock filter
-                if (show && stockStatus !== 'all') {
-                    if (stockStatus === 'in_stock' && stock <= 0) show = false;
-                    else if (stockStatus === 'low_stock' && (stock <= 0 || stock >= 10)) show = false;
-                    else if (stockStatus === 'out_of_stock' && stock > 0) show = false;
-                }
-
-                card.style.display = show ? '' : 'none';
-            });
-        }
-
-        searchInput.addEventListener('input', filterProducts);
-        categoryFilter.addEventListener('change', filterProducts);
-        stockFilter.addEventListener('change', filterProducts);
-
-        // Reset filters
-        window.resetFilters = function() {
-            searchInput.value = '';
-            categoryFilter.value = '';
-            stockFilter.value = 'all';
-            filterProducts();
-        };
-    });
-</script>
-
-<style>
-    /* Product Card Styles */
-    .product-card-inner {
-        transition: transform 0.2s, box-shadow 0.2s;
-        overflow: hidden;
-    }
-    .product-card-inner:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-    }
-
-    .product-image-wrapper {
-        position: relative;
-        overflow: hidden;
-        height: 200px;
-        background: #f8f9fa;
-    }
-
-    .product-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .product-image-placeholder {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        color: #6c757d;
-    }
-
-    .stock-badge-overlay {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-    }
-
-    .stock-badge-overlay .badge {
-        padding: 6px 12px;
-        font-size: 0.8rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-
-    .product-name {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 4px;
-    }
-
-    .product-price {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #28a745;
-    }
-
-    .stock-info {
-        font-size: 0.9rem;
-        color: #6c757d;
-    }
-
-    /* Low stock - RED */
-    .stock-low {
-        color: #dc3545 !important;
-        font-weight: 600;
-    }
-
-    /* Out of stock - DARKER RED */
-    .stock-out {
-        color: #721c24 !important;
-        font-weight: 700;
-    }
-
-    /* Stats cards */
-    .bg-opacity-10 {
-        --bs-bg-opacity: 0.1;
-    }
-    .border-primary.bg-opacity-10 {
-        background-color: rgba(13, 110, 253, 0.1) !important;
-    }
-    .border-success.bg-opacity-10 {
-        background-color: rgba(40, 167, 69, 0.1) !important;
-    }
-    .border-warning.bg-opacity-10 {
-        background-color: rgba(255, 193, 7, 0.1) !important;
-    }
-    .border-danger.bg-opacity-10 {
-        background-color: rgba(220, 53, 69, 0.1) !important;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .product-image-wrapper {
-            height: 150px;
-        }
-        .product-price {
-            font-size: 1.1rem;
-        }
-    }
-</style>
 {% endblock %}

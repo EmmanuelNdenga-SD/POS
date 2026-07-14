@@ -1,0 +1,170 @@
+/* ============================================
+   SALES SPECIFIC STYLES
+   New Sale, Staff Make Sale, etc.
+   ============================================ */
+
+/* ---------- Product Search Results ---------- */
+.product-result {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.product-result:hover {
+    background-color: var(--bg-secondary);
+}
+
+#searchResults {
+    max-height: 250px;
+    overflow-y: auto;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-card);
+}
+
+/* ---------- Cart Items ---------- */
+.cart-item .qty-cell,
+.cart-item .subtotal-cell {
+    font-weight: 600;
+}
+
+.cart-item .btn-sm {
+    padding: 0.15rem 0.35rem;
+}
+
+#orderSummary tbody tr {
+    transition: background-color 0.2s;
+}
+#orderSummary tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* ---------- Product Cards (for old grid view) ---------- */
+.product-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+.product-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.product-card .btn-group .btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.75rem;
+}
+
+.product-card .quantity-input {
+    padding: 0.2rem 0;
+    font-size: 0.875rem;
+}
+
+.price-display {
+    font-size: 0.95rem;
+}
+
+/* ---------- Sale List ---------- */
+.sale-status-badge {
+    font-weight: 500;
+    padding: 0.4rem 0.7rem;
+}
+
+.sale-status-badge.paid {
+    background-color: #198754;
+    color: #fff;
+}
+.sale-status-badge.pending {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.sale-total {
+    font-weight: 700;
+}
+
+/* ---------- Sale Detail ---------- */
+.sale-detail-header {
+    margin-bottom: 1.5rem;
+}
+
+.sale-detail-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.sale-detail-info .info-item {
+    padding: 0.75rem;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.sale-detail-info .info-item .label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+}
+
+.sale-detail-info .info-item .value {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* ---------- Staff Make Sale ---------- */
+.staff-sale-form .product-select {
+    margin-bottom: 1rem;
+}
+
+.staff-sale-form .quick-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.staff-sale-form .quick-actions .btn {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+    .card-body .row .col-md-3 {
+        margin-top: 0.5rem;
+    }
+    
+    .product-card .btn-group .btn {
+        padding: 0.15rem 0.3rem;
+        font-size: 0.7rem;
+    }
+    
+    .product-card .input-group {
+        flex-wrap: nowrap;
+    }
+    
+    .sale-detail-info {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .sale-detail-info {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------- Print ---------- */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .sale-detail-info .info-item {
+        background-color: #f8f9fa !important;
+        border: 1px solid #ddd !important;
+    }
+    
+    #orderSummary {
+        font-size: 0.9rem;
+    }
+}

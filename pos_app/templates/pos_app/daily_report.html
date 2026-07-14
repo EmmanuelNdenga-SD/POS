@@ -1,50 +1,253 @@
 {% extends 'pos_app/base.html' %}
+{% load static %}
+
 {% block title %}Daily Report{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'pos_app/css/reports.css' %}">
+{% endblock %}
+
 {% block content %}
-<h2>Daily Report - {{ date }}</h2>
-<div class="row">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">Sales Summary</div>
+<!-- Report Header -->
+<div class="d-flex justify-content-between align-items-center mb-4 report-header">
+    <div>
+        <h2><i class="fas fa-calendar-day me-2"></i> Daily Report</h2>
+        <p class="text-muted mb-0">{{ date|date:"l, F j, Y" }}</p>
+    </div>
+    <div class="report-nav">
+        <a href="{% url 'daily_report' %}?date={{ previous_date }}" class="btn btn-outline-primary">
+            <i class="fas fa-chevron-left me-1"></i> Previous
+        </a>
+        <a href="{% url 'daily_report' %}" class="btn btn-primary">
+            <i class="fas fa-calendar-day me-1"></i> Today
+        </a>
+        <a href="{% url 'daily_report' %}?date={{ next_date }}" class="btn btn-outline-primary">
+            Next <i class="fas fa-chevron-right ms-1"></i>
+        </a>
+        <button onclick="window.print()" class="btn btn-secondary no-print">
+            <i class="fas fa-print me-1"></i> Print
+        </button>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card primary">
             <div class="card-body">
-                <p><strong>Total Sales:</strong> KSh {{ total_sales|floatformat:2 }}</p>
-                <p><strong>Number of Sales:</strong> {{ sales_count }}</p>
+                <h6 class="card-title">Total Sales</h6>
+                <p class="card-text">KSh {{ total_sales|floatformat:0 }}</p>
+                <div class="stat-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">Products Remaining</div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card success">
             <div class="card-body">
-                <ul class="list-group">
-                    {% for product in products %}
-                    <li class="list-group-item d-flex justify-content-between">
-                        {{ product.name }}
-                        <span class="badge bg-secondary">{{ product.quantity_in_stock }}</span>
-                    </li>
-                    {% empty %}
-                    <li class="list-group-item">No products.</li>
-                    {% endfor %}
-                </ul>
+                <h6 class="card-title">Transactions</h6>
+                <p class="card-text">{{ sales_count }}</p>
+                <div class="stat-icon">
+                    <i class="fas fa-receipt"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <h6 class="card-title">Avg Order Value</h6>
+                <p class="card-text">KSh {{ avg_order|floatformat:0 }}</p>
+                <div class="stat-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <h6 class="card-title">Items Sold</h6>
+                <p class="card-text">{{ total_items_sold }}</p>
+                <div class="stat-icon">
+                    <i class="fas fa-boxes"></i>
+                </div>
             </div>
         </div>
     </div>
 </div>
-<h4 class="mt-4">Sale Details</h4>
-<table class="table table-striped">
-    <thead><tr><th>#ID</th><th>Customer</th><th>Total</th><th>Payment</th><th>Status</th></tr></thead>
-    <tbody>
-        {% for sale in sales %}
-        <tr>
-            <td>{{ sale.id }}</td>
-            <td>{{ sale.customer_name|default:"Walk-in" }}</td>
-            <td>{{ sale.total_amount }}</td>
-            <td>{{ sale.get_payment_method_display }}</td>
-            <td>{{ sale.get_payment_status_display }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5">No sales today.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+
+<!-- Payment Method Breakdown -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-credit-card me-2"></i> Payment Methods</h6>
+            </div>
+            <div class="card-body">
+                {% if payment_breakdown %}
+                    <div class="table-responsive">
+                        <table class="table report-table">
+                            <thead>
+                                <tr>
+                                    <th>Method</th>
+                                    <th>Count</th>
+                                    <th>Amount</th>
+                                    <th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for method in payment_breakdown %}
+                                    <tr>
+                                        <td>
+                                            <i class="fas fa-{% if method.method == 'cash' %}money-bill{% elif method.method == 'mpesa' %}mobile-alt{% else %}university{% endif %} me-2"></i>
+                                            {{ method.label }}
+                                        </td>
+                                        <td>{{ method.count }}</td>
+                                        <td><strong>KSh {{ method.total|floatformat:0 }}</strong></td>
+                                        <td>
+                                            <div class="progress">
+                                                <div class="progress-bar bg-{% if method.method == 'cash' %}success{% elif method.method == 'mpesa' %}info{% else %}primary{% endif %}" 
+                                                     style="width: {{ method.percentage }}%;">
+                                                    {{ method.percentage }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th>Total</th>
+                                    <th>{{ sales_count }}</th>
+                                    <th>KSh {{ total_sales|floatformat:0 }}</th>
+                                    <th>100%</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-credit-card fa-3x text-muted mb-3 d-block"></i>
+                        <p class="text-muted">No payment data available for today.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Selling Products -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-trophy me-2"></i> Top Selling Products</h6>
+                <span class="badge bg-primary">{{ top_products|length }} products</span>
+            </div>
+            <div class="card-body">
+                {% if top_products %}
+                    <div class="table-responsive">
+                        <table class="table report-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th>Quantity Sold</th>
+                                    <th>Revenue</th>
+                                    <th>Price Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in top_products %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td><strong>{{ item.product__name }}</strong></td>
+                                        <td>{{ item.product__category__name|default:"-" }}</td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ item.total_quantity }}</span>
+                                        </td>
+                                        <td><strong>KSh {{ item.total_revenue|floatformat:0 }}</strong></td>
+                                        <td>
+                                            <span class="badge bg-{% if item.price_type == 'retail' %}success{% else %}info{% endif %}">
+                                                {{ item.price_type|title }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-box-open fa-3x text-muted mb-3 d-block"></i>
+                        <p class="text-muted">No products sold today.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sale Details -->
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-list me-2"></i> Sale Details</h6>
+            </div>
+            <div class="card-body">
+                {% if sales %}
+                    <div class="table-responsive">
+                        <table class="table report-table">
+                            <thead>
+                                <tr>
+                                    <th>#ID</th>
+                                    <th>Customer</th>
+                                    <th>Total</th>
+                                    <th>Payment</th>
+                                    <th>Status</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sale in sales %}
+                                    <tr>
+                                        <td><strong>{{ sale.id }}</strong></td>
+                                        <td>{{ sale.customer_name|default:"Walk-in" }}</td>
+                                        <td><strong>KSh {{ sale.total_amount }}</strong></td>
+                                        <td>{{ sale.get_payment_method_display }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if sale.payment_status == 'paid' %}success{% else %}warning{% endif %}">
+                                                {{ sale.get_payment_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ sale.created_at|time:"H:i" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="2">Total</th>
+                                    <th>KSh {{ total_sales|floatformat:0 }}</th>
+                                    <th colspan="3"></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-receipt fa-3x text-muted mb-3 d-block"></i>
+                        <p class="text-muted">No sales recorded today.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
