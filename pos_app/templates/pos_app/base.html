@@ -108,11 +108,25 @@
             {% if user.is_authenticated %}
                 <div class="user-info">
                     <i class="fas fa-user-circle"></i> <strong>{{ user.username }}</strong><br>
-                    <small style="color: var(--text-secondary);">{% if user.is_superuser %}Administrator{% elif user.is_staff %}Staff{% elif user.groups.all.0.name %}Staff{% else %}User{% endif %}</small>
+                    <small style="color: var(--text-secondary);">
+                        {% if user.is_superuser %}
+                            Administrator
+                        {% elif user.is_staff %}
+                            Staff
+                        {% elif user.groups.all.0.name %}
+                            {{ user.groups.all.0.name }}
+                        {% else %}
+                            User
+                        {% endif %}
+                    </small>
                 </div>
-                <a class="logout-link" href="{% url 'logout' %}">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </a>
+                <!-- Logout FORM (POST method) - uses Django's built-in logout -->
+                <form method="post" action="{% url 'logout' %}" style="display: inline; width: 100%;">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-link" style="background: none; border: none; color: var(--text-secondary); width: 100%; text-align: left; padding: 10px 18px; cursor: pointer; border-radius: 8px; transition: background 0.2s;">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </form>
             {% else %}
                 <a class="logout-link" href="{% url 'login' %}">
                     <i class="fas fa-sign-in-alt"></i> Login
@@ -126,6 +140,7 @@
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-{% if 'success' in message.tags %}check-circle{% elif 'error' in message.tags or 'danger' in message.tags %}exclamation-circle{% elif 'warning' in message.tags %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>

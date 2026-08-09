@@ -131,6 +131,10 @@ def staff_make_sale(request):
                     price_at_sale=price,
                     price_type=price_type
                 )
+                # Deduct stock
+                product.quantity_in_stock -= quantity
+                product.save()
+                
                 messages.success(request, f'Sold {quantity} x {product.name} (KSh {price} each).')
                 return redirect('staff_dashboard')
             except ValueError as e:
@@ -264,128 +268,96 @@ def sale_list(request):
 @login_required
 @user_passes_test(is_staff_or_admin)
 def sale_create(request):
-    # Initialize cart in session if not exists
-    if 'cart' not in request.session:
-        request.session['cart'] = []
-    
-    # Handle adding item to cart
-    if request.method == 'POST' and 'add_item' in request.POST:
-        # Get product ID from hidden field (set by datalist selection)
-        product_id = request.POST.get('product_id')
-        
-        # If product_id is empty, try to get from search field
-        if not product_id:
-            search_value = request.POST.get('product_search', '')
-            if '|' in search_value:
-                product_id = search_value.split('|')[0]
-        
-        if not product_id:
-            messages.error(request, 'Please select a product from the search results.')
-            return redirect('sale_create')
-        
-        product = get_object_or_404(Product, pk=product_id)
-        quantity = int(request.POST.get('quantity', 1))
-        price_type = request.POST.get('price_type', 'retail')
-        
-        # Check stock
-        if product.quantity_in_stock < quantity:
-            messages.error(request, f"Insufficient stock for {product.name}. Available: {product.quantity_in_stock}")
-            return redirect('sale_create')
-        
-        # Get price based on type
-        price = product.wholesale_price if price_type == 'wholesale' else product.price
-        
-        # Add to cart
-        cart = request.session['cart']
-        
-        # Check if product already in cart with same price type
-        found = False
-        for item in cart:
-            if item['product_id'] == product.id and item['price_type'] == price_type:
-                item['quantity'] += quantity
-                found = True
-                break
-        
-        if not found:
-            cart.append({
-                'product_id': product.id,
-                'product_name': product.name,
-                'quantity': quantity,
-                'price_at_sale': float(price),
-                'price_type': price_type,
-                'subtotal': float(price) * quantity
-            })
-        
-        request.session['cart'] = cart
-        messages.success(request, f"Added {quantity} x {product.name} to cart.")
-        return redirect('sale_create')
-    
-    # Handle completing sale
+    # Handle completing sale (direct submission)
     if request.method == 'POST' and 'complete_sale' in request.POST:
-        cart = request.session.get('cart', [])
+        # Get payment method and status
+        payment_method = request.POST.get('payment_method')
+        payment_status = request.POST.get('payment_status')
         
-        if not cart:
-            messages.error(request, 'Cart is empty. Add some products first.')
+        if not payment_method:
+            messages.error(request, 'Please select a payment method.')
             return redirect('sale_create')
         
-        # Get form data
-        sale_form = SaleForm(request.POST)
-        if sale_form.is_valid():
-            sale = sale_form.save(commit=False)
-            sale.created_by = request.user
-            sale.customer_name = 'Walk-in'
-            sale.total_amount = 0
-            sale.save()
-            
-            total = 0
-            for item in cart:
-                product = get_object_or_404(Product, pk=item['product_id'])
-                qty = item['quantity']
-                price = item['price_at_sale']
-                price_type = item['price_type']
+        # Collect products with quantity > 0
+        cart_items = []
+        total = 0
+        
+        for key, value in request.POST.items():
+            if key.startswith('quantity_') and int(value) > 0:
+                product_id = key.replace('quantity_', '')
+                qty = int(value)
                 
-                # Check stock again
-                if sale.payment_status == 'paid' and product.quantity_in_stock < qty:
-                    messages.error(request, f"Insufficient stock for {product.name}. Available: {product.quantity_in_stock}")
+                # Get price type
+                price_type_key = f'price_type_{product_id}'
+                price_type = request.POST.get(price_type_key, 'retail')
+                
+                try:
+                    product = Product.objects.get(pk=product_id)
+                except Product.DoesNotExist:
+                    messages.error(request, f'Product not found: ID {product_id}')
+                    return redirect('sale_create')
+                
+                # Get price based on type
+                price = product.wholesale_price if price_type == 'wholesale' else product.price
+                
+                cart_items.append({
+                    'product': product,
+                    'quantity': qty,
+                    'price': price,
+                    'price_type': price_type
+                })
+                total += price * qty
+        
+        if not cart_items:
+            messages.error(request, 'Please add at least one product (quantity > 0).')
+            return redirect('sale_create')
+        
+        try:
+            # Create sale
+            sale = Sale.objects.create(
+                payment_method=payment_method,
+                payment_status=payment_status or 'paid',
+                created_by=request.user,
+                customer_name='Walk-in',
+                total_amount=0
+            )
+            
+            # Create sale items and deduct stock
+            for item in cart_items:
+                # Check stock for paid sales
+                if payment_status == 'paid' and item['product'].quantity_in_stock < item['quantity']:
+                    messages.error(request, f"Insufficient stock for {item['product'].name}. Available: {item['product'].quantity_in_stock}")
                     sale.delete()
                     return redirect('sale_create')
                 
                 SaleItem.objects.create(
                     sale=sale,
-                    product=product,
-                    quantity=qty,
-                    price_at_sale=price,
-                    price_type=price_type
+                    product=item['product'],
+                    quantity=item['quantity'],
+                    price_at_sale=item['price'],
+                    price_type=item['price_type']
                 )
-                total += price * qty
+                
+                # Deduct stock for paid sales
+                if payment_status == 'paid':
+                    item['product'].quantity_in_stock -= item['quantity']
+                    item['product'].save()
             
             sale.total_amount = total
             sale.save()
             
-            # Clear cart
-            request.session['cart'] = []
-            messages.success(request, f'Sale #{sale.id} created successfully.')
+            messages.success(request, f'Sale #{sale.id} created successfully. Total: KSh {total}')
             return redirect('sale_list')
-        else:
-            messages.error(request, 'Please fill in all required fields.')
+            
+        except Exception as e:
+            messages.error(request, f'Error creating sale: {str(e)}')
+            return redirect('sale_create')
     
-    # Get cart items for display
-    cart_items = []
-    total_amount = 0
-    for item in request.session.get('cart', []):
-        item['subtotal'] = item['price_at_sale'] * item['quantity']
-        total_amount += item['subtotal']
-        cart_items.append(item)
-    
-    # Prepare form
-    sale_form = SaleForm()
+    # GET request - display form
     products = Product.objects.all()
     
     context = {
-        'sale_form': sale_form,
         'products': products,
-        'cart_items': cart_items,
-        'total_amount': total_amount,
     }
     return render(request, 'pos_app/sale_form.html', context)
 
@@ -393,7 +365,22 @@ def sale_create(request):
 @user_passes_test(is_staff_or_admin)
 def sale_detail(request, pk):
     sale = get_object_or_404(Sale, pk=pk)
-    return render(request, 'pos_app/sale_detail.html', {'sale': sale})
+    
+    # Calculate subtotal for each item
+    items = []
+    for item in sale.items.all():
+        items.append({
+            'product': item.product,
+            'quantity': item.quantity,
+            'price_at_sale': item.price_at_sale,
+            'price_type': item.price_type,
+            'subtotal': item.quantity * item.price_at_sale
+        })
+    
+    return render(request, 'pos_app/sale_detail.html', {
+        'sale': sale,
+        'items': items
+    })
 
 @login_required
 def sale_delete(request, pk):
@@ -411,6 +398,7 @@ def sale_delete(request, pk):
     if request.method == 'POST':
         sale_id = sale.id
         customer = sale.customer_name or 'Walk-in'
+        items_restored = 0
         
         # Restore stock if sale was paid
         if sale.payment_status == 'paid':
@@ -418,22 +406,29 @@ def sale_delete(request, pk):
                 product = item.product
                 product.quantity_in_stock += item.quantity
                 product.save()
+                items_restored += 1
         
+        # Delete the sale (cascades to sale items)
         sale.delete()
-        messages.success(request, f'Sale #{sale_id} for {customer} deleted successfully. Stock restored.')
+        
+        if items_restored > 0:
+            messages.success(request, f'Sale #{sale_id} for {customer} deleted. {items_restored} product(s) stock restored.')
+        else:
+            messages.success(request, f'Sale #{sale_id} for {customer} deleted successfully.')
+        
         return redirect('sale_list')
     
     return redirect('sale_list')
 
 # ---------- Category CRUD (Staff & Admin) ----------
 @login_required
-@user_passes_test(is_staff_or_admin)  # Changed from is_admin to is_staff_or_admin
+@user_passes_test(is_staff_or_admin)
 def category_list(request):
     categories = Category.objects.annotate(product_count=models.Count('products'))
     return render(request, 'pos_app/category_list.html', {'categories': categories})
 
 @login_required
-@user_passes_test(is_staff_or_admin)  # Changed from is_admin to is_staff_or_admin
+@user_passes_test(is_staff_or_admin)
 def category_create(request):
     if request.method == 'POST':
         form = CategoryForm(request.POST)
@@ -464,7 +459,7 @@ def category_create(request):
     return redirect('product_create')
 
 @login_required
-@user_passes_test(is_staff_or_admin)  # Changed from is_admin to is_staff_or_admin
+@user_passes_test(is_staff_or_admin)
 def category_delete(request, pk):
     category = get_object_or_404(Category, pk=pk)
     if request.method == 'POST':
@@ -493,9 +488,9 @@ def daily_report(request):
     else:
         report_date = timezone.now().date()
     
-    # Date range for the day
-    start = datetime.combine(report_date, datetime.min.time())
-    end = datetime.combine(report_date, datetime.max.time())
+    # Date range for the day - use timezone-aware datetimes
+    start = timezone.make_aware(datetime.combine(report_date, datetime.min.time()))
+    end = timezone.make_aware(datetime.combine(report_date, datetime.max.time()))
     
     # Get sales for the day
     sales = Sale.objects.filter(created_at__range=(start, end), payment_status='paid')
@@ -568,14 +563,14 @@ def monthly_report(request):
     else:
         report_date = timezone.now().date()
     
-    # Get first day of the month - FIXED: use datetime.combine
-    start = datetime.combine(report_date.replace(day=1), datetime.min.time())
+    # Get first day of the month - use timezone-aware datetimes
+    start = timezone.make_aware(datetime.combine(report_date.replace(day=1), datetime.min.time()))
     
-    # Get last day of the month - FIXED: use datetime.combine
+    # Get last day of the month
     if start.month == 12:
-        end = datetime.combine(start.replace(year=start.year+1, month=1, day=1), datetime.min.time()) - timedelta(seconds=1)
+        end = timezone.make_aware(datetime.combine(start.replace(year=start.year+1, month=1, day=1), datetime.min.time())) - timedelta(seconds=1)
     else:
-        end = datetime.combine(start.replace(month=start.month+1, day=1), datetime.min.time()) - timedelta(seconds=1)
+        end = timezone.make_aware(datetime.combine(start.replace(month=start.month+1, day=1), datetime.min.time())) - timedelta(seconds=1)
     
     # Get sales for the month
     sales = Sale.objects.filter(created_at__range=(start, end), payment_status='paid')
